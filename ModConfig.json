@@ -1,0 +1,21 @@
+{
+  "ModId": "LB1_AP_Mod",
+  "ModName": "LB1_AP_Mod",
+  "ModAuthor": "jrad",
+  "ModVersion": "1.0.0",
+  "ModDescription": "Provides AP support for LB1",
+  "ModDll": "LB1_AP_Mod.dll",
+  "ModIcon": "Preview.png",
+  "ModR2RManagedDll32": "x86/LB1_AP_Mod.dll",
+  "ModR2RManagedDll64": "x64/LB1_AP_Mod.dll",
+  "ModNativeDll32": "",
+  "ModNativeDll64": "",
+  "IsLibrary": false,
+  "ReleaseMetadataFileName": "LB1_AP_Mod.ReleaseMetadata.json",
+  "PluginData": {},
+  "IsUniversalMod": false,
+  "ModDependencies": [ "reloaded.sharedlib.hooks" ],
+  "OptionalDependencies": [],
+  "SupportedAppId": ["legobatman.exe"],
+  "ProjectUrl": "https://github.com/jradcode23/LB1_AP_Mod"
+}
