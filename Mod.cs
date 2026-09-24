@@ -2,9 +2,10 @@
 using Reloaded.Mod.Interfaces;
 using LB1_AP_Mod.Template;
 using LB1_AP_Mod.Configuration;
-#if DEBUG
 using System.Diagnostics;
-#endif
+// #if DEBUG
+
+// #endif
 
 namespace LB1_AP_Mod;
 
@@ -16,7 +17,7 @@ public class Mod : ModBase // <= Do not Remove.
     /// <summary>
     /// Provides access to the mod loader API.
     /// </summary>
-    private readonly IModLoader _modLoader;
+    // private readonly IModLoader _modLoader;
 
     /// <summary>
     /// Provides access to the Reloaded.Hooks API.
@@ -27,55 +28,95 @@ public class Mod : ModBase // <= Do not Remove.
     /// <summary>
     /// Provides access to the Reloaded logger.
     /// </summary>
-    private readonly ILogger _logger;
+    private static ILogger? Logger;
 
     /// <summary>
     /// Entry point into the mod, instance that created this class.
     /// </summary>
-    private readonly IMod _owner;
+    // private readonly IMod _owner;
 
     /// <summary>
     /// Provides access to this mod's configuration.
     /// </summary>
-    private Config _configuration;
+    public static Config? Configuration;
 
     /// <summary>
     /// The configuration of the currently executing mod.
     /// </summary>
-    private readonly IModConfig _modConfig;
+    // private readonly IModConfig _modConfig;
+    public static ArchipelagoHandler? LB1_AP;
+    public static Game? GameInstance;
+    public static uint BaseAddress;
 
     public Mod(ModContext context)
     {
-        _modLoader = context.ModLoader;
+        // _modLoader = context.ModLoader;
         _hooks = context.Hooks;
-        _logger = context.Logger;
-        _owner = context.Owner;
-        _configuration = context.Configuration;
-        _modConfig = context.ModConfig;
+        Logger = context.Logger;
+        // _owner = context.Owner;
+        Configuration = context.Configuration;
+        // _modConfig = context.ModConfig;
 
 #if DEBUG
         // Attaches debugger in debug mode; ignored in release.
         Debugger.Launch();
 #endif
 
-        // For more information about this template, please see
-        // https://reloaded-project.github.io/Reloaded-II/ModTemplate/
+        GameInstance = new Game();
+        BaseAddress = (uint)Process.GetCurrentProcess().MainModule!.BaseAddress;
 
-        // If you want to implement e.g. unload support in your mod,
-        // and some other neat features, override the methods in ModBase.
+        if (Configuration == null)
+        {
+            PrintToLog("Configuration is null. Terminating Mod.");
+            return;
+        }
+        SetUpAP(Configuration.ArchipelagoOptions.Server, Configuration.ArchipelagoOptions.Port, Configuration.ArchipelagoOptions.Slot, Configuration.ArchipelagoOptions.Password);
+        PrintToLog("Mod Version: LB1_AP_mod version 1.0.0 Source Code");
 
-        // TODO: Implement some mod logic
+        var thread1 = new Thread(start: () =>
+        {
+            while (true)
+            {
+                if (!ArchipelagoHandler.IsConnecting && !ArchipelagoHandler.IsConnected)
+                {
+                    LB1_AP!.InitConnect();
+                }
+                Thread.Sleep(2500);
+            }
+        });
+        thread1.Start();
+    }
+
+    // Helper Function to help print to the terminal and log file with a consistent prefix
+    public static void PrintToLog(string message)
+    {
+        Logger!.WriteLineAsync("[LB1.AP.mod] " + message);
     }
 
     #region Standard Overrides
     public override void ConfigurationUpdated(Config configuration)
     {
-        // Apply settings from configuration.
-        // ... your code here.
-        _configuration = configuration;
-        _logger.WriteLine($"[{_modConfig.ModId}] Config Updated: Applying");
+        if (Configuration == null)
+        {
+            PrintToLog("Configuration is null, cannot update.");
+            return;
+        }
+
+        if (Configuration.ArchipelagoOptions.Port != configuration.ArchipelagoOptions.Port || Configuration.ArchipelagoOptions.Slot != configuration.ArchipelagoOptions.Slot)
+        {
+            Configuration = configuration;
+            PrintToLog($"Config Updated: Applying");
+            LB1_AP!.Disconnect();
+            SetUpAP(Configuration.ArchipelagoOptions.Server, Configuration.ArchipelagoOptions.Port, Configuration.ArchipelagoOptions.Slot, Configuration.ArchipelagoOptions.Password);
+        }
     }
     #endregion
+
+    public static void SetUpAP(string server, int port, string slot, string password)
+    {
+        LB1_AP = new ArchipelagoHandler(server, port, slot, password);
+        PrintToLog($"Mod Initialized with Server: {server}, Port: {port}, Slot: {slot}");
+    }
 
     #region For Exports, Serialization etc.
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.

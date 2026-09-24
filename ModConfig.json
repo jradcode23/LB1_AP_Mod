@@ -1,7 +1,7 @@
 {
   "ModId": "LB1_AP_Mod",
   "ModName": "LB1_AP_Mod",
-  "ModAuthor": "jrad",
+  "ModAuthor": "jrad, ZAPaDASH04",
   "ModVersion": "1.0.0",
   "ModDescription": "Provides AP support for LB1",
   "ModDll": "LB1_AP_Mod.dll",
