@@ -9,7 +9,6 @@ public class LevelHandler
     public enum BitMask
     {
         None = 0,
-        Minikit = 1 << 0,
         StoryUnlocked = 1 << 1,
         FreeplayUnlocked = 1 << 2,
     }
@@ -121,7 +120,7 @@ public class LevelHandler
         byte* ptr = LevelBaseAddress + (ushort)level;
         if (ptr == null || LevelBaseAddress == null)
         {
-            Game.PrintToLog($"Can't Unlock Level, null pointer at 0x{(nuint)ptr:X}");
+            Mod.PrintToLog($"Can't Unlock Level, null pointer at 0x{(nuint)ptr:X}");
         }
         *ptr |= (byte)(BitMask.StoryUnlocked | BitMask.FreeplayUnlocked);
     }
@@ -132,7 +131,7 @@ public class LevelHandler
         byte* ptr = LevelBaseAddress + (ushort)level;
         if (ptr == null || LevelBaseAddress == null)
         {
-            Game.PrintToLog($"Can't Unlock Level, null pointer at 0x{(nuint)ptr:X}");
+            Mod.PrintToLog($"Can't Lock Level, null pointer at 0x{(nuint)ptr:X}");
         }
         *ptr &= unchecked((byte)~(byte)(BitMask.StoryUnlocked | BitMask.FreeplayUnlocked));
     }
@@ -145,7 +144,7 @@ public class LevelHandler
         byte* freeplay = story + 1;
         if (story == null || freeplay == null || LevelBaseAddress == null)
         {
-            Game.PrintToLog($"Can't Unlock SH, null pointer at 0x{(nuint)story:X}");
+            Mod.PrintToLog($"Can't Unlock SH, null pointer at 0x{(nuint)story:X}");
         }
         *story = 1;
         *freeplay = 1;

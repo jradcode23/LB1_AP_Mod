@@ -23,7 +23,7 @@ public class Mod : ModBase // <= Do not Remove.
     /// Provides access to the Reloaded.Hooks API.
     /// </summary>
     /// <remarks>This is null if you remove dependency on Reloaded.SharedLib.Hooks in your mod.</remarks>
-    private readonly IReloadedHooks? _hooks;
+    private static IReloadedHooks? _hooks;
 
     /// <summary>
     /// Provides access to the Reloaded logger.
@@ -116,6 +116,35 @@ public class Mod : ModBase // <= Do not Remove.
     {
         LB1_AP = new ArchipelagoHandler(server, port, slot, password);
         PrintToLog($"Mod Initialized with Server: {server}, Port: {port}, Slot: {slot}");
+    }
+
+        public static bool InitOnMenu()
+    {
+        if (_hooks == null)
+        {
+            PrintToLog("Hooks are Null. Please do not proceed and report this to the Dev.");
+            return false;
+        }
+
+        int hookCount = Game._asmHooks.Count;
+        if (hookCount > 0)
+        {
+            PrintToLog($"Hooks already set up. Count: {hookCount}, skipping setup.");
+            return true;
+        }
+
+        PrintToLog("Modifying instructions for hook setup.");
+        Game.ModifyInstructions();
+
+        if (_hooks != null)
+        {
+            PrintToLog("Menu loaded, setting up hooks. Please wait for hook setup before loading a save file.");
+            GameInstance!.SetupHooks(_hooks);
+            PrintToLog("Hooks set up complete. You may now load a save file.");
+            return true;
+        }
+
+        return false;
     }
 
     #region For Exports, Serialization etc.
