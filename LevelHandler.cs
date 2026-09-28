@@ -3,6 +3,8 @@
 public class LevelHandler
 {
     private static unsafe byte* LevelBaseAddress => *(byte**)(Mod.BaseAddress + 0x6CA594);
+    private const int StoryTrueSuperHeroOffset = 0;
+    private const int FreeplaySuperHeroOffset = 1;
     private const int StoryOffset = 2;
     private const int FreeplayOffset = 3;
     private const int OffsetMultiplier = 4;
@@ -48,6 +50,11 @@ public class LevelHandler
             Mod.PrintToLog($"Cannot Unlock Level, itemID is out of index: {itemID}");
             return;
         }
+        if (LevelBaseAddress == null)
+        {
+            Mod.PrintToLog("Level Base Address is null. Please report to a dev. Aborting.");
+            return;
+        }
         int offset = LevelMemoryOffsets[itemID];
         byte* storyMode = LevelBaseAddress + offset * OffsetMultiplier + StoryOffset;
         byte* freeplayMode = LevelBaseAddress + offset * OffsetMultiplier + FreeplayOffset;
@@ -69,6 +76,43 @@ public class LevelHandler
             byte* freeplayMode = LevelBaseAddress + offset * OffsetMultiplier + FreeplayOffset;
             *storyMode = 0;
             *freeplayMode = 0;
+        }
+    }
+
+    // Helper Function to unlock a True Super Hero
+    public static unsafe void UnlockTrueSuperHero(int itemID)
+    {
+        if (itemID < 0 || itemID > 30)
+        {
+            Mod.PrintToLog($"Cannot Unlock True Super Hero, itemID is out of index: {itemID}");
+            return;
+        }
+        if (LevelBaseAddress == null)
+        {
+            Mod.PrintToLog("Level Base Address is null. Please report to a dev. Aborting.");
+            return;
+        }
+        int offset = LevelMemoryOffsets[itemID];
+        byte* storySuperHero = LevelBaseAddress + offset * OffsetMultiplier + StoryTrueSuperHeroOffset;
+        byte* freeplaySuperHero = LevelBaseAddress + offset * OffsetMultiplier + FreeplaySuperHeroOffset;
+        *storySuperHero = 1;
+        *freeplaySuperHero = 1;
+    }
+
+    // Helper Function to reset all True Super Heros to locked
+    public static unsafe void ResetTrueSuperHeroes()
+    {
+        foreach (int offset in LevelMemoryOffsets)
+        {
+            if (LevelBaseAddress == null)
+            {
+                Mod.PrintToLog("Level Base Address is null. Please report to a dev. Aborting.");
+                return;
+            }
+            byte* storySuperHero = LevelBaseAddress + offset * OffsetMultiplier + StoryTrueSuperHeroOffset;
+            byte* freeplaySuperHero = LevelBaseAddress + offset * OffsetMultiplier + FreeplaySuperHeroOffset;
+            *storySuperHero = 0;
+            *freeplaySuperHero = 0;
         }
     }
 
@@ -143,6 +187,17 @@ public class LevelHandler
         0x24, // V3-4
         0x25, // V3-5
     ];
+
+    public static unsafe int ConvertLevelIDToArchiID()
+    {
+        byte* levelID = (byte*)(Mod.BaseAddress + 0x5629C4);
+        if (levelID == null)
+        {
+            Mod.PrintToLog("Cannot Convert Level ID. Level ID is null");
+            return -1;
+        }
+        return Array.IndexOf(LevelIDs, *levelID);
+    }
 
     private static unsafe byte* HostageArray => *(byte**)(Mod.BaseAddress + 0x6B09B0);
     private static unsafe byte* HostageCount => (*(byte**)(Mod.BaseAddress + 0x6B096C)) + 0x516;
