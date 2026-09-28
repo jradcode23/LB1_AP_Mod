@@ -60,15 +60,17 @@ public class Game
         }
     }
 
+    private const int HostageOffset = 400;
     private const int LevelOffset = 425;
-    private const int TrueStatusOffset = 455;
+    private const int TrueSuperHeroOffset = 455;
     public static void ManageItem(int itemID)
     {
         switch (itemID)
         {
-            case < LevelOffset:
+            case < LevelOffset: // Handle Hostage
+                LevelHandler.UnlockHostage(itemID - HostageOffset);
                 break;
-            case < TrueStatusOffset: // Handle Level
+            case < TrueSuperHeroOffset: // Handle Level
                 LevelHandler.UnlockLevel(itemID - LevelOffset);
                 break;
         }
@@ -80,6 +82,7 @@ public class Game
     private static IReverseWrapper<OpenMenu> _reverseWrapOnOpenMenu = default!;
     private static IReverseWrapper<CloseMenu> _reverseWrapOnCloseMenu = default!;
     private static IReverseWrapper<NewGameCutscene> _reverseWrapOnNewGameCutscene = default!;
+    private static IReverseWrapper<HostageRescue> _reverseWrapOnTrueSuperHero = default!;
 
     // Modifying the associated assembly of our game to call our functions
     // TODO: Future proof this from game updates by implementing signature scanning
@@ -128,6 +131,17 @@ public class Game
             "popfd",
         };
         _asmHooks.Add(hooks.CreateAsmHook(NewGameCutsceneHook, (int)(Mod.BaseAddress + 0x20F88F), AsmHookBehaviour.ExecuteAfter).Activate());
+
+        string[] HostageHook =
+        {
+            "use32",
+            "pushfd",
+            "pushad",
+            $"{hooks.Utilities.GetAbsoluteCallMnemonics(OnHostageRescue, out _reverseWrapOnTrueSuperHero)}",
+            "popad",
+            "popfd",
+        };
+        _asmHooks.Add(hooks.CreateAsmHook(HostageHook, (int)(Mod.BaseAddress + 0x253177), AsmHookBehaviour.ExecuteAfter).Activate());
     }
 
     private static bool IsInHub()
@@ -152,11 +166,12 @@ public class Game
         // TODO: This code may be a little repetive right now with the subsequent functions, once other items are implemented, can see what we want to do
         if (IsInHub())
         {
-            Mod.LB1_AP!.UpdateBasedOnItems(LevelOffset, TrueStatusOffset - 1);
+            Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, LevelOffset - 1);
+            Mod.LB1_AP!.UpdateBasedOnItems(LevelOffset, TrueSuperHeroOffset - 1);
         }
         else
         {
-            Mod.LB1_AP!.UpdateBasedOnLocations(LevelOffset, TrueStatusOffset - 1);
+            Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, TrueSuperHeroOffset - 1);
         }
     }
 
@@ -178,14 +193,14 @@ public class Game
             ResetItems();
             Mod.GameInstance!.isMenuOpen = true;
             Mod.PrintToLog("Menu or Level Selector In Hub Opened");
-            Mod.LB1_AP!.UpdateBasedOnItems(LevelOffset, TrueStatusOffset - 1);
+            Mod.LB1_AP!.UpdateBasedOnItems(HostageOffset, TrueSuperHeroOffset - 1);
         }
         else if (Mod.GameInstance!.MapID != 0 && LevelHandler.CheckStatusMap(Mod.GameInstance!.MapID) == -1)
         {
             ResetItems();
             Mod.GameInstance!.isMenuOpen = true;
             Mod.PrintToLog("Menu or Level Selector In Level Opened");
-            Mod.LB1_AP!.UpdateBasedOnLocations(LevelOffset, TrueStatusOffset - 1);
+            Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, TrueSuperHeroOffset - 1);
         }
     }
 
@@ -200,12 +215,13 @@ public class Game
             if (IsInHub())
             {
                 Mod.PrintToLog("Menu or Level Selector In Hub Closed");
-                Mod.LB1_AP!.UpdateBasedOnItems(LevelOffset, TrueStatusOffset - 1);
+                Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, LevelOffset - 1);
+                Mod.LB1_AP!.UpdateBasedOnItems(LevelOffset, TrueSuperHeroOffset - 1);
             }
             else
             {
                 Mod.PrintToLog("Menu or Level Selector In Level Closed");
-                Mod.LB1_AP!.UpdateBasedOnLocations(LevelOffset, TrueStatusOffset - 1);
+                Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, TrueSuperHeroOffset - 1);
             }
         }
     }
@@ -223,6 +239,15 @@ public class Game
         }
     }
 
+    [Function([FunctionAttribute.Register.edx],
+    FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
+    public delegate void HostageRescue(uint edx);
+    private static void OnHostageRescue(uint edx)
+    {
+        int itemId = BitOperations.TrailingZeroCount(edx);
+        CheckAndReportLocation(itemId + HostageOffset);
+    }
+
     public static void CheckAndReportLocation(int apID)
     {
         if (Mod.LB1_AP!.IsLocationChecked(apID))
@@ -237,6 +262,7 @@ public class Game
     private static void ResetItems()
     {
         LevelHandler.ResetLevels();
+        LevelHandler.ResetHostages();
     }
 
     // public static void CheckWinCon()

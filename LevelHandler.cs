@@ -111,4 +111,75 @@ public class LevelHandler
         return Array.IndexOf(StatusScreenMapId, mapID);
     }
 
+    private static readonly int[] LevelIDs = [
+        0x03, // H1-1
+        0x04, // H1-2
+        0x05, // H1-3
+        0x06, // H1-4
+        0x06, // H1-5
+        0x0A, // H2-1
+        0x0B, // H2-2
+        0x0C, // H2-3
+        0x0D, // H2-4
+        0x0E, // H2-5
+        0x11, // H3-1
+        0x12, // H3-2
+        0x13, // H3-3
+        0x14, // H3-4
+        0x15, // H3-5
+        0x17, // V1-1
+        0x18, // V1-2
+        0x19, // V1-3
+        0x1A, // V1-4
+        0x1B, // V1-5
+        0x1C, // V2-1
+        0x1D, // V2-2
+        0x1E, // V2-3
+        0x1F, // V2-4
+        0x20, // V2-5
+        0x21, // V3-1
+        0x22, // V3-2
+        0x23, // V3-3
+        0x24, // V3-4
+        0x25, // V3-5
+    ];
+
+    private static unsafe byte* HostageArray => *(byte**)(Mod.BaseAddress + 0x6B09B0);
+    private static unsafe byte* HostageCount => (*(byte**)(Mod.BaseAddress + 0x6B096C)) + 0x516;
+    private const int TotalHostageCount = 25;
+    private const int HostageByteCount = 4;
+
+    // Helper Function to unlock a hostage
+    public static unsafe void UnlockHostage(int itemID)
+    {
+        if (HostageArray == null || HostageCount == null)
+        {
+            Mod.PrintToLog("Hostage Array or Hostage Count is null. Please report to a dev. Aborting.");
+            return;
+        }
+        if (itemID < 0 || itemID > TotalHostageCount)
+        {
+            Mod.PrintToLog($"Cannot unlock hostage, itemID is out of index: {itemID}");
+            return;
+        }
+
+        *(HostageArray + itemID / 8) |= (byte)(1 << (itemID % 8));
+        // TODO: May need to adjust how we handle the count for Hush character unlock
+        *HostageCount += 1;
+    }
+
+    // Helper Function to reset hostages
+    public static unsafe void ResetHostages()
+    {
+        if (HostageArray == null || HostageCount == null)
+        {
+            Mod.PrintToLog("Hostage Array or Hostage Count is null. Please report to a dev. Aborting.");
+            return;
+        }
+        for (int i = 0; i < HostageByteCount; i++)
+        {
+            *(HostageArray + i) = 0;
+        }
+        *HostageCount = 0;
+    }
 }
