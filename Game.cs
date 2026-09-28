@@ -11,6 +11,7 @@ namespace LB1_AP_Mod;
 public class Game
 {
     private ushort MapID = 0;
+    public bool isMenuOpen = false;
     // After Connecting, this function reads initial game variables and NOPs code that we don't want running
     public static unsafe void ModifyInstructions()
     {
@@ -76,6 +77,8 @@ public class Game
 
     public static List<IAsmHook> _asmHooks = [];
     private static IReverseWrapper<UpdateMap> _reverseWrapOnMapUpdate = default!;
+    private static IReverseWrapper<OpenMenu> _reverseWrapOnOpenMenu = default!;
+    private static IReverseWrapper<CloseMenu> _reverseWrapOnCloseMenu = default!;
 
     // Modifying the associated assembly of our game to call our functions
     // TODO: Future proof this from game updates by implementing signature scanning
@@ -91,6 +94,28 @@ public class Game
             "popfd",
         ];
         _asmHooks.Add(hooks.CreateAsmHook(updateMapIDHook, Mod.BaseAddress + 0xB0FE2, AsmHookBehaviour.ExecuteFirst).Activate());
+
+        string[] openMenuHook =
+        [
+            "use32",
+            "pushfd",
+            "pushad",
+            $"{hooks.Utilities.GetAbsoluteCallMnemonics(OnOpenMenu, out _reverseWrapOnOpenMenu)}",
+            "popad",
+            "popfd",
+        ];
+        _asmHooks.Add(hooks.CreateAsmHook(openMenuHook, Mod.BaseAddress + 0x2BF6E3, AsmHookBehaviour.ExecuteFirst).Activate());
+
+        string[] closeMenuHook =
+        {
+            "use32",
+            "pushfd",
+            "pushad",
+            $"{hooks.Utilities.GetAbsoluteCallMnemonics(OnCloseMenu, out _reverseWrapOnCloseMenu)}",
+            "popad",
+            "popfd",
+        };
+        _asmHooks.Add(hooks.CreateAsmHook(closeMenuHook, (int)(Mod.BaseAddress + 0x2BF570), AsmHookBehaviour.ExecuteAfter).Activate());
     }
 
     [Function([FunctionAttribute.Register.ecx],
@@ -107,7 +132,49 @@ public class Game
             CheckAndReportLocation(levelCompletedID + LevelOffset);
         }
         ResetItems();
-        Mod.LB1_AP!.UpdateBasedOnItems(LevelOffset, TrueStatusOffset - 1);
+        Mod.LB1_AP!.UpdateBasedOnLocations(LevelOffset, TrueStatusOffset - 1);
+    }
+
+    private static readonly ushort[] HubMapIDs = [0x9, 0xA, 0x5];
+
+    [Function([FunctionAttribute.Register.edx],
+    FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
+    public delegate void OpenMenu(ushort edx);
+    private static void OnOpenMenu(ushort edx)
+    {
+
+        if (edx != 1)
+        {
+            return;
+        }
+        bool isHub = HubMapIDs.Contains(Mod.GameInstance!.MapID);
+        if (isHub)
+        {
+            Mod.PrintToLog("Menu or Level Selector In Hub Opened");
+            Mod.GameInstance!.isMenuOpen = true;
+            ResetItems();
+            Mod.LB1_AP!.UpdateBasedOnItems(LevelOffset, TrueStatusOffset - 1);
+        }
+        else if (Mod.GameInstance!.MapID != 0 && LevelHandler.CheckStatusMap(Mod.GameInstance!.MapID) == -1)
+        {
+            Mod.PrintToLog("Menu or Level Selector In Level Opened");
+            Mod.GameInstance!.isMenuOpen = true;
+            ResetItems();
+            Mod.LB1_AP!.UpdateBasedOnLocations(LevelOffset, TrueStatusOffset - 1);
+        }
+    }
+
+    [Function(CallingConventions.Fastcall)]
+    public delegate void CloseMenu();
+    private static void OnCloseMenu()
+    {
+        if (Mod.GameInstance!.isMenuOpen)
+        {
+            Mod.GameInstance!.isMenuOpen = false;
+            ResetItems();
+            Mod.LB1_AP!.UpdateBasedOnLocations(LevelOffset, TrueStatusOffset - 1);
+            Mod.PrintToLog("Menu or Level Selector Closed");
+        }
     }
 
     public static void CheckAndReportLocation(int apID)
