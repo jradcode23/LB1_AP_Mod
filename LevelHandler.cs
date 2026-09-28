@@ -58,7 +58,7 @@ public class LevelHandler
     // Helper Function to reset all levels to locked
     public static unsafe void ResetLevels()
     {
-        foreach(int offset in LevelMemoryOffsets)
+        foreach (int offset in LevelMemoryOffsets)
         {
             if (LevelBaseAddress == null)
             {

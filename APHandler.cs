@@ -144,7 +144,7 @@ public class ArchipelagoHandler
             // {
             //     HintSystem.UpdateConnectionStatusText("Failed To Hook");
             // }
-            // EnsureBackgroundThreads();
+            EnsureBackgroundThreads();
             // scouting.Wait();
             // ScoutedLocations = scouting.Result;
             //resync here
@@ -159,7 +159,8 @@ public class ArchipelagoHandler
         return false;
     }
 
-        /* Tells archi want we want to do when an item is received. 
+    /* 
+    Tells archi want we want to do when an item is received. 
     Majority of items besides the groupings in this function are given to the player when they sync up with the item/location container. 
     However, there are a few we want the player to have instantaneously so we handle those instances here.
     */
@@ -171,59 +172,59 @@ public class ArchipelagoHandler
         //     int gameID = (int)item.ItemId - gameOffset;
         //     bool prevInShop = false, prevInLevelSelect = false;
 
-            // Verify if the player is in a shop or in the level selector since we give them certain items instantly if they are
-            // if (Mod.GameInstance != null)
-            // {
-            //     lock (Mod.GameInstance.StateLock)
-            //     {
-            //         prevInShop = Mod.GameInstance.PrevInShop;
-            //         prevInLevelSelect = Mod.GameInstance.PrevInLevelSelect;
-            //     }
-            // }
+        // Verify if the player is in a shop or in the level selector since we give them certain items instantly if they are
+        // if (Mod.GameInstance != null)
+        // {
+        //     lock (Mod.GameInstance.StateLock)
+        //     {
+        //         prevInShop = Mod.GameInstance.PrevInShop;
+        //         prevInLevelSelect = Mod.GameInstance.PrevInLevelSelect;
+        //     }
+        // }
 
-            // if (Mod.GameInstance != null && prevInShop && gameID != 699)
-            // {
-            //     // Token or red brick purchasable
-            //     if ((gameID >= 900 && gameID <= 935) || (gameID >= 213 && gameID <= 425))
-            //     {
-            //         Game.ManageItem(gameID);
-            //     }
-            //     return;
-            // }
-            // If in level select, we give them any item but purple stud
-            // if (Mod.GameInstance != null && prevInLevelSelect && gameID != 699)
-            // {
-            //     Game.ManageItem(gameID);
-            //     return;
-            // }
-            // If the player is controllable, we give them purple studs, any spells/abilities, and Horcruxes
-            // if (Mod.GameInstance != null && Game.IsPlayerControllable())
-            // {
-            //     // Handle Spells/Abilities
-            //     if (gameID >= Game.SpellPurchOffset)
-            //     {
-            //         Game.ManageItem(gameID);
-            //         int mapID;
-            //         lock (Mod.GameInstance!.MapLock)
-            //         {
-            //             mapID = Mod.GameInstance!.MapID;
-            //         }
-            //         SpellHandler.SpellMapLogic(mapID);
-            //         return;
-            //     }
-                // Handle Purple Studs
-                // if (gameID == 699)
-                // {
-                //     HubHandler.HandlePurpleStud();
-                //     return;
-                // }
-            // }
-            // Handle Purple Stud if player isn't controllable (could be in the menu)
-            // if (Mod.GameInstance != null && !Game.IsPlayerControllable() && gameID == 699)
-            // {
-            //     _queuedItems.Enqueue(gameID);
-            //     return;
-            // }
+        // if (Mod.GameInstance != null && prevInShop && gameID != 699)
+        // {
+        //     // Token or red brick purchasable
+        //     if ((gameID >= 900 && gameID <= 935) || (gameID >= 213 && gameID <= 425))
+        //     {
+        //         Game.ManageItem(gameID);
+        //     }
+        //     return;
+        // }
+        // If in level select, we give them any item but purple stud
+        // if (Mod.GameInstance != null && prevInLevelSelect && gameID != 699)
+        // {
+        //     Game.ManageItem(gameID);
+        //     return;
+        // }
+        // If the player is controllable, we give them purple studs, any spells/abilities, and Horcruxes
+        // if (Mod.GameInstance != null && Game.IsPlayerControllable())
+        // {
+        //     // Handle Spells/Abilities
+        //     if (gameID >= Game.SpellPurchOffset)
+        //     {
+        //         Game.ManageItem(gameID);
+        //         int mapID;
+        //         lock (Mod.GameInstance!.MapLock)
+        //         {
+        //             mapID = Mod.GameInstance!.MapID;
+        //         }
+        //         SpellHandler.SpellMapLogic(mapID);
+        //         return;
+        //     }
+        // Handle Purple Studs
+        // if (gameID == 699)
+        // {
+        //     HubHandler.HandlePurpleStud();
+        //     return;
+        // }
+        // }
+        // Handle Purple Stud if player isn't controllable (could be in the menu)
+        // if (Mod.GameInstance != null && !Game.IsPlayerControllable() && gameID == 699)
+        // {
+        //     _queuedItems.Enqueue(gameID);
+        //     return;
+        // }
         // }
     }
 
@@ -491,7 +492,7 @@ public class ArchipelagoHandler
 
 
 
-        public void UpdateTags(string[] tags)
+    public void UpdateTags(string[] tags)
     {
         if (!IsConnected || _session == null)
         {

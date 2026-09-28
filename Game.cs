@@ -63,7 +63,6 @@ public class Game
     private const int TrueStatusOffset = 455;
     public static void ManageItem(int itemID)
     {
-        Mod.PrintToLog($"Managing item with ID: {itemID}");
         switch (itemID)
         {
             case < LevelOffset:
@@ -105,8 +104,10 @@ public class Game
         int levelCompletedID = LevelHandler.CheckStatusMap(ecx);
         if (levelCompletedID != -1)
         {
-            CheckAndReportLocation(levelCompletedID);
+            CheckAndReportLocation(levelCompletedID + LevelOffset);
         }
+        ResetItems();
+        Mod.LB1_AP!.UpdateBasedOnItems(LevelOffset, TrueStatusOffset - 1);
     }
 
     public static void CheckAndReportLocation(int apID)
@@ -117,12 +118,17 @@ public class Game
             return;
         }
         Mod.PrintToLog($"Checking location for AP ID: {apID}");
-        Mod.LB1_AP!.CheckLocation(apID + LevelOffset);
+        Mod.LB1_AP!.CheckLocation(apID);
+    }
+
+    private static void ResetItems()
+    {
+        LevelHandler.ResetLevels();
     }
 
     // public static void CheckWinCon()
     // {
-        // Levels Beaten
+    // Levels Beaten
     //     if (Mod.LB1_AP!.SlotDataInstance!.EndGoal == 2)
     //     {
     //         int levelsCompleted = Mod.LB1_AP!.CountLocationsCheckedInRange(450, 473);
