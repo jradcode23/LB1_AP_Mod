@@ -118,6 +118,11 @@ public class Game
         _asmHooks.Add(hooks.CreateAsmHook(closeMenuHook, (int)(Mod.BaseAddress + 0x2BF570), AsmHookBehaviour.ExecuteAfter).Activate());
     }
 
+    private static bool IsInHub()
+    {
+        return HubMapIDs.Contains(Mod.GameInstance!.MapID);
+    }
+
     [Function([FunctionAttribute.Register.ecx],
     FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
     public delegate void UpdateMap(ushort ecx);
@@ -132,7 +137,15 @@ public class Game
             CheckAndReportLocation(levelCompletedID + LevelOffset);
         }
         ResetItems();
-        Mod.LB1_AP!.UpdateBasedOnLocations(LevelOffset, TrueStatusOffset - 1);
+        // TODO: This code may be a little repetive right now with the subsequent functions, once other items are implemented, can see what we want to do
+        if (IsInHub())
+        {
+            Mod.LB1_AP!.UpdateBasedOnItems(LevelOffset, TrueStatusOffset - 1);
+        }
+        else
+        {
+            Mod.LB1_AP!.UpdateBasedOnLocations(LevelOffset, TrueStatusOffset - 1);
+        }
     }
 
     private static readonly ushort[] HubMapIDs = [0x9, 0xA, 0x5];
@@ -147,19 +160,19 @@ public class Game
         {
             return;
         }
-        bool isHub = HubMapIDs.Contains(Mod.GameInstance!.MapID);
-        if (isHub)
+
+        if (IsInHub())
         {
-            Mod.PrintToLog("Menu or Level Selector In Hub Opened");
-            Mod.GameInstance!.isMenuOpen = true;
             ResetItems();
+            Mod.GameInstance!.isMenuOpen = true;
+            Mod.PrintToLog("Menu or Level Selector In Hub Opened");
             Mod.LB1_AP!.UpdateBasedOnItems(LevelOffset, TrueStatusOffset - 1);
         }
         else if (Mod.GameInstance!.MapID != 0 && LevelHandler.CheckStatusMap(Mod.GameInstance!.MapID) == -1)
         {
-            Mod.PrintToLog("Menu or Level Selector In Level Opened");
-            Mod.GameInstance!.isMenuOpen = true;
             ResetItems();
+            Mod.GameInstance!.isMenuOpen = true;
+            Mod.PrintToLog("Menu or Level Selector In Level Opened");
             Mod.LB1_AP!.UpdateBasedOnLocations(LevelOffset, TrueStatusOffset - 1);
         }
     }
@@ -172,8 +185,16 @@ public class Game
         {
             Mod.GameInstance!.isMenuOpen = false;
             ResetItems();
-            Mod.LB1_AP!.UpdateBasedOnLocations(LevelOffset, TrueStatusOffset - 1);
-            Mod.PrintToLog("Menu or Level Selector Closed");
+            if (IsInHub())
+            {
+                Mod.PrintToLog("Menu or Level Selector In Hub Closed");
+                Mod.LB1_AP!.UpdateBasedOnItems(LevelOffset, TrueStatusOffset - 1);
+            }
+            else
+            {
+                Mod.PrintToLog("Menu or Level Selector In Level Closed");
+                Mod.LB1_AP!.UpdateBasedOnLocations(LevelOffset, TrueStatusOffset - 1);
+            }
         }
     }
 
