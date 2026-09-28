@@ -79,6 +79,7 @@ public class Game
     private static IReverseWrapper<UpdateMap> _reverseWrapOnMapUpdate = default!;
     private static IReverseWrapper<OpenMenu> _reverseWrapOnOpenMenu = default!;
     private static IReverseWrapper<CloseMenu> _reverseWrapOnCloseMenu = default!;
+    private static IReverseWrapper<NewGameCutscene> _reverseWrapOnNewGameCutscene = default!;
 
     // Modifying the associated assembly of our game to call our functions
     // TODO: Future proof this from game updates by implementing signature scanning
@@ -116,6 +117,17 @@ public class Game
             "popfd",
         };
         _asmHooks.Add(hooks.CreateAsmHook(closeMenuHook, (int)(Mod.BaseAddress + 0x2BF570), AsmHookBehaviour.ExecuteAfter).Activate());
+
+        string[] NewGameCutsceneHook =
+        {
+            "use32",
+            "pushfd",
+            "pushad",
+            $"{hooks.Utilities.GetAbsoluteCallMnemonics(OnNewGameCutscene, out _reverseWrapOnNewGameCutscene)}",
+            "popad",
+            "popfd",
+        };
+        _asmHooks.Add(hooks.CreateAsmHook(NewGameCutsceneHook, (int)(Mod.BaseAddress + 0x20F88F), AsmHookBehaviour.ExecuteAfter).Activate());
     }
 
     private static bool IsInHub()
@@ -195,6 +207,19 @@ public class Game
                 Mod.PrintToLog("Menu or Level Selector In Level Closed");
                 Mod.LB1_AP!.UpdateBasedOnLocations(LevelOffset, TrueStatusOffset - 1);
             }
+        }
+    }
+
+    [Function(CallingConventions.Fastcall)]
+    public delegate void NewGameCutscene();
+    private static unsafe void OnNewGameCutscene()
+    {
+        Mod.PrintToLog("New Game Cutscene Written");
+        uint* levelToBeLoadedPTR = (uint*)(Mod.BaseAddress + 0x6CA89C);
+        uint* hubConstantPTRAddress = (uint*)(Mod.BaseAddress + 0x6CA8B4);
+        if (*levelToBeLoadedPTR != *hubConstantPTRAddress)
+        {
+            *levelToBeLoadedPTR = *hubConstantPTRAddress;
         }
     }
 

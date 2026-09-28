@@ -118,7 +118,7 @@ public class Mod : ModBase // <= Do not Remove.
         PrintToLog($"Mod Initialized with Server: {server}, Port: {port}, Slot: {slot}");
     }
 
-        public static bool InitOnMenu()
+    public static bool InitOnMenu()
     {
         if (_hooks == null)
         {
@@ -138,7 +138,7 @@ public class Mod : ModBase // <= Do not Remove.
 
         if (_hooks != null)
         {
-            PrintToLog("Menu loaded, setting up hooks. Please wait for hook setup before loading a save file.");
+            PrintToLog("Game loaded, setting up hooks. Please wait for hook setup before loading a save file.");
             GameInstance!.SetupHooks(_hooks);
             PrintToLog("Hooks set up complete. You may now load a save file.");
             return true;
