@@ -2,165 +2,113 @@
 
 public class LevelHandler
 {
-    public static unsafe byte* LevelBaseAddress => *(byte**)(Mod.BaseAddress + 0x06C66A);
+    private static unsafe byte* LevelBaseAddress => *(byte**)(Mod.BaseAddress + 0x6CA594);
+    private const int StoryOffset = 2;
+    private const int FreeplayOffset = 3;
+    private const int OffsetMultiplier = 4;
 
-    // Bitmask for how the level unlock byte is structed.
-    [Flags]
-    public enum BitMask
-    {
-        None = 0,
-        StoryUnlocked = 1 << 1,
-        FreeplayUnlocked = 1 << 2,
-    }
-
-    // Enum representing each level and their offset from the base pointer
-    public enum LevelData: ushort
-    {
-        // Misc
-        ShopRoom = 0x05,
-        TrophyRoomHero = 0x06,
-        TrophyRoomEvil = 0x07,
-        ExperimentRoomEvil = 0x08,
-        MissionRoomHero = 0x09,
-        MissionRoomEvil = 0x0A,
-
-        // H1
-        H1_1 = 0x12,
-        H1_2 = 0x1E,
-        H1_3 = 0x2B,
-        H1_4 = 0x30,
-        H1_5 = 0x48,
-
-        // H2
-        H2_1 = 0x5B,
-        H2_2 = 0x74,
-        H2_3 = 0x66, // diff order
-        H2_4 = 0x87,
-        H2_5 = 0x8E,
-
-        // H3
-        H3_1 = 0xA0,
-        H3_2 = 0xA6,
-        H3_3 = 0xAC,
-        H3_4 = 0xB8,
-        H3_5 = 0xC6,
-
-        // V1
-        V1_1 = 0x18,
-        V1_2 = 0x24,
-        V1_3 = 0x37,
-        V1_4 = 0x3F,
-        V1_5 = 0x50,
-
-        // V2
-        V2_1 = 0x61,
-        V2_2 = 0x81, // diff order
-        V2_3 = 0x7B,
-        V2_4 = 0x6D, // diff order
-        V2_5 = 0x96,
-
-        // V3
-        V3_1 = 0xB2,
-        V3_2 = 0xD2,
-        V3_3 = 0xD8,
-        V3_4 = 0xC0,
-        V3_5 = 0xCC,
-    }
-
-    // Used to fetch the level number, since in level activity is stored in the same addresses, we use this to make sure the right check is sent
-    public static LevelData[] LevelUnlockOrder =
-    [
-        LevelData.H1_1,
-        LevelData.H1_2,
-        LevelData.H1_3,
-        LevelData.H1_4,
-        LevelData.H1_5,
-
-        LevelData.H2_1,
-        LevelData.H2_2,
-        LevelData.H2_3,
-        LevelData.H2_4,
-        LevelData.H2_5,
-
-        LevelData.H3_1,
-        LevelData.H3_2,
-        LevelData.H3_3,
-        LevelData.H3_4,
-        LevelData.H3_5,
-
-        LevelData.V1_1,
-        LevelData.V1_2,
-        LevelData.V1_3,
-        LevelData.V1_4,
-        LevelData.V1_5,
-
-        LevelData.V2_1,
-        LevelData.V2_2,
-        LevelData.V2_3,
-        LevelData.V2_4,
-        LevelData.V2_5,
-
-        LevelData.V3_1,
-        LevelData.V3_2,
-        LevelData.V3_2,
-        LevelData.V3_4,
-        LevelData.V3_5,
+    private static readonly int[] LevelMemoryOffsets = [
+        0x09, // H1-1
+        0x0C, // H1-2
+        0x0F, // H1-3
+        0x12, // H1-4
+        0x15, // H1-5
+        0x1E, // H2-1
+        0x21, // H2-2
+        0x24, // H2-3
+        0x27, // H2-4
+        0x2A, // H2-5
+        0x33, // H3-1
+        0x36, // H3-2
+        0x39, // H3-3
+        0x3C, // H3-4
+        0x3F, // H3-5
+        0x45, // V1-1
+        0x48, // V1-2
+        0x4B, // V1-3
+        0x4E, // V1-4
+        0x51, // V1-5
+        0x53, // V2-1
+        0x57, // V2-2
+        0x5A, // V2-3
+        0x5D, // V2-4
+        0x60, // V2-5
+        0x63, // V3-1
+        0x66, // V3-2
+        0x69, // V3-3
+        0x6C, // V3-4
+        0x6F, // V3-5
     ];
 
-    // Helper function to look up the applicable level based on the Archi ID
-    public static LevelData ConvertIDToLeveData(int id)
+    // Helper Function to unlock a level
+    public static unsafe void UnlockLevel(int itemID)
     {
-        LevelData level = LevelUnlockOrder[id];
-        return level;
-    }
-
-    // Helper function to unlock a level
-    public static unsafe void UnlockLevel(LevelData level)
-    {
-        byte* ptr = LevelBaseAddress + (ushort)level;
-        if (ptr == null || LevelBaseAddress == null)
+        if (itemID < 0 || itemID > 30)
         {
-            Mod.PrintToLog($"Can't Unlock Level, null pointer at 0x{(nuint)ptr:X}");
+            Mod.PrintToLog($"Cannot Unlock Level, itemID is out of index: {itemID}");
+            return;
         }
-        *ptr |= (byte)(BitMask.StoryUnlocked | BitMask.FreeplayUnlocked);
+        int offset = LevelMemoryOffsets[itemID];
+        byte* storyMode = LevelBaseAddress + offset * OffsetMultiplier + StoryOffset;
+        byte* freeplayMode = LevelBaseAddress + offset * OffsetMultiplier + FreeplayOffset;
+        *storyMode = 1;
+        *freeplayMode = 1;
     }
 
-    // Helper function to lock a level
-    public static unsafe void LockLevel(LevelData level)
-    {
-        byte* ptr = LevelBaseAddress + (ushort)level;
-        if (ptr == null || LevelBaseAddress == null)
-        {
-            Mod.PrintToLog($"Can't Lock Level, null pointer at 0x{(nuint)ptr:X}");
-        }
-        *ptr &= unchecked((byte)~(byte)(BitMask.StoryUnlocked | BitMask.FreeplayUnlocked));
-    }
-
-    // Helper function to unlock a Super Hero
-    public static unsafe void UnlockSuperHero(LevelData level)
-    {
-        // Adjusting the address since SH address is before the rest of the in level activity
-        byte* story = LevelBaseAddress + (ushort)level - 6;
-        byte* freeplay = story + 1;
-        if (story == null || freeplay == null || LevelBaseAddress == null)
-        {
-            Mod.PrintToLog($"Can't Unlock SH, null pointer at 0x{(nuint)story:X}");
-        }
-        *story = 1;
-        *freeplay = 1;
-    }
-
-    // Helper function to reset all In Level Unlocks
+    // Helper Function to reset all levels to locked
     public static unsafe void ResetLevels()
     {
-        for (int i = 0; i < LevelUnlockOrder.Length; i++)
+        foreach(int offset in LevelMemoryOffsets)
         {
-            byte* level = LevelBaseAddress + (ushort)LevelUnlockOrder[i];
-            byte* story = level - 6;
-            byte* freeplay = story + 1;
-            *level = 0;
-            *story = 0;
-            *freeplay = 0;
+            if (LevelBaseAddress == null)
+            {
+                Mod.PrintToLog("Level Base Address is null. Please report to a dev. Aborting.");
+                return;
+            }
+            byte* storyMode = LevelBaseAddress + offset * OffsetMultiplier + StoryOffset;
+            byte* freeplayMode = LevelBaseAddress + offset * OffsetMultiplier + FreeplayOffset;
+            *storyMode = 0;
+            *freeplayMode = 0;
         }
     }
+
+    private static readonly int[] StatusScreenMapId = [
+        0x16, // H1-1
+        0x22, // H1-2
+        0x2E, // H1-3
+        0x35, // H1-4
+        0x4D, // H1-5
+        0x5F, // H2-1
+        0x79, // H2-2
+        0x6B, // H2-3
+        0x8C, // H2-4
+        0x94, // H2-5
+        0xA4, // H3-1
+        0xAA, // H3-2
+        0xB0, // H3-3
+        0xBE, // H3-4
+        0xCA, // H3-5
+        0x1C, // V1-1
+        0x29, // V1-2
+        0x3D, // V1-3
+        0x45, // V1-4
+        0x55, // V1-5
+        0x85, // V2-1
+        0x65, // V2-2
+        0x7F, // V2-3
+        0x72, // V2-4
+        0x9C, // V2-5
+        0xB6, // V3-1
+        0xD6, // V3-2
+        0xDC, // V3-3
+        0xC4, // V3-4
+        0xD0, // V3-5 
+    ];
+
+    // Helper Function to return Level complete value if player enters that map
+    public static int CheckStatusMap(int mapID)
+    {
+        return Array.IndexOf(StatusScreenMapId, mapID);
+    }
+
 }

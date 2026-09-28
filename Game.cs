@@ -59,6 +59,22 @@ public class Game
         }
     }
 
+    private const int LevelOffset = 425;
+    private const int TrueStatusOffset = 455;
+    public static void ManageItem(int itemID)
+    {
+        Mod.PrintToLog($"Managing item with ID: {itemID}");
+        switch (itemID)
+        {
+            case < LevelOffset:
+                break;
+            case < TrueStatusOffset: // Handle Level
+                LevelHandler.UnlockLevel(itemID - LevelOffset);
+                break;
+        }
+
+    }
+
     public static List<IAsmHook> _asmHooks = [];
     private static IReverseWrapper<UpdateMap> _reverseWrapOnMapUpdate = default!;
 
@@ -85,5 +101,43 @@ public class Game
     {
         Mod.PrintToLog($"Map ID Updated to: {ecx}");
         Mod.GameInstance!.MapID = ecx;
+
+        int levelCompletedID = LevelHandler.CheckStatusMap(ecx);
+        if (levelCompletedID != -1)
+        {
+            CheckAndReportLocation(levelCompletedID);
+        }
     }
+
+    public static void CheckAndReportLocation(int apID)
+    {
+        if (Mod.LB1_AP!.IsLocationChecked(apID))
+        {
+            Mod.PrintToLog($"Location for AP ID: {apID} already checked");
+            return;
+        }
+        Mod.PrintToLog($"Checking location for AP ID: {apID}");
+        Mod.LB1_AP!.CheckLocation(apID + LevelOffset);
+    }
+
+    // public static void CheckWinCon()
+    // {
+        // Levels Beaten
+    //     if (Mod.LB1_AP!.SlotDataInstance!.EndGoal == 2)
+    //     {
+    //         int levelsCompleted = Mod.LB1_AP!.CountLocationsCheckedInRange(450, 473);
+    //         int requiredLevels = Mod.LB1_AP!.SlotDataInstance!.NumberOfRequiredLevels;
+    //         if (requiredLevels == -1)
+    //         {
+    //             Mod.PrintToLog("Can't Determine if the game is completed, Level slot data not available.");
+    //             return;
+    //         }
+    //         Mod.PrintToLog($"Player Has Completed {levelsCompleted} Levels");
+    //         if (levelsCompleted >= requiredLevels)
+    //         {
+    //             Mod.LB1_AP!.Release();
+    //         }
+    //         return;
+    //     }
+    // }
 }
