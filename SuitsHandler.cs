@@ -1,8 +1,8 @@
-﻿using System;
+﻿namespace LB1_AP_Mod;
 
-public class SuitsHandler
+public class Suits
 {
-    enum SuitName
+    private enum SuitName
     {
         Bat_Suit,
         Heat_Suit,
@@ -19,26 +19,8 @@ public class SuitsHandler
         Blocked_Suit
     };
 
-    enum SuitID
+    private enum SuitID : ushort
     {
-        /*
-        7608:batman suit
-        7658:batman heat suit
-        76A8:batman glide suit
-        76F8:batman demo suit
-        7748:batman sonar suit
-        7798:robin suit
-        77E8:robin dive suit
-        7838:robin tech suit
-        7888:robin magnet suit
-        78D8:robin attracto suit
-
-        D628: nothing (no wear)
-
-        1000:batman secret invis suit
-        5608:batman cowl only
-        C6A8:batman cowl and cape (no wear)
-        */
         Bat_SuitID = 0x7608,
         Heat_SuitID = 0x7658,
         Glide_SuitID = 0x76A8,
@@ -52,12 +34,12 @@ public class SuitsHandler
         Blocked_SuitID = 0xD628 // this likely points to something that coincidentally makes a suit that can't be worn.
     };
 
-    SuitName SuitIDtoSuitName(uint id)
+    private SuitName SuitIDtoSuitName(uint id)
     {
         return SuitIDtoSuitName((SuitID)id);
     }
 
-    SuitName SuitIDtoSuitName(SuitID id)
+    private SuitName SuitIDtoSuitName(SuitID id)
     {
         switch (id)
         {
@@ -77,12 +59,12 @@ public class SuitsHandler
         }
     }
 
-    SuitID SuitNametoSuitID(uint name)
+    private SuitID SuitNametoSuitID(uint name)
     {
         return SuitNametoSuitID((SuitName)name);
     }
 
-    SuitID SuitNametoSuitID(SuitName name)
+    private SuitID SuitNametoSuitID(SuitName name)
     {
         switch (name)
         {
@@ -102,20 +84,31 @@ public class SuitsHandler
         }
     }
 
-    // void updateSuits()
-    // {
-    //     for (uint i = 0; i < 10; i++)
-    //     {
-    //         if (lb1AP_items[80 + i])
-    //         {
-    //             unlock(i);
-    //         }
-    //         else
-    //         {
-    //             // untested
-    //             lock (i) ;
-    //         }
-    //     }
+    private const byte DefaultSuitUnlockMask = 0x21; // Bit mask that has only Batsuit & Robin suit unlocked
 
-    // }
+    private static unsafe byte* SuitUnlocks1 => *(byte**)(Mod.BaseAddress + 0x6D0C10);
+    private static unsafe byte* SuitUnlocks2 => (byte*)(Mod.BaseAddress + 0x6CA450);
+    private static unsafe byte* SuitUnlocks3 => (byte*)(Mod.BaseAddress + 0x5CA294);
+
+    public static unsafe void UnlockSuit(int ID)
+    {
+        int byteOffset = ID / 8;
+        int bitOffset = ID % 8;
+        *(SuitUnlocks1 + byteOffset) |= (byte)(1 << bitOffset);
+        *(SuitUnlocks2 + byteOffset) |= (byte)(1 << bitOffset);
+        *(SuitUnlocks3 + byteOffset) |= (byte)(1 << bitOffset);
+    }
+
+    private static unsafe void ResetSuitUnlocks(byte* suitUnlocks)
+    {
+        suitUnlocks[0] = DefaultSuitUnlockMask;
+        suitUnlocks[1] = 0;
+    }
+
+    public static unsafe void ResetSuits()
+    {
+        ResetSuitUnlocks(SuitUnlocks1);
+        ResetSuitUnlocks(SuitUnlocks2);
+        ResetSuitUnlocks(SuitUnlocks3);
+    }
 }

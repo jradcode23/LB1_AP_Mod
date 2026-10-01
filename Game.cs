@@ -60,6 +60,8 @@ public class Game
         }
     }
 
+    private const int SuitOffset = 80;
+    private const int MinikitOffset = 100;
     private const int HostageOffset = 400;
     private const int LevelOffset = 425;
     private const int TrueSuperHeroOffset = 455;
@@ -68,6 +70,13 @@ public class Game
     {
         switch (itemID)
         {
+            case < SuitOffset: // Handle Character
+                break;
+            case < MinikitOffset: // Handle Suit Unlock
+                Suits.UnlockSuit(itemID - SuitOffset);
+                break;
+            case < HostageOffset: // Handle Minikit
+                break;
             case < LevelOffset: // Handle Hostage
                 LevelHandler.UnlockHostage(itemID - HostageOffset);
                 break;
@@ -293,6 +302,7 @@ public class Game
         LevelHandler.ResetLevels();
         LevelHandler.ResetHostages();
         LevelHandler.ResetTrueSuperHeroes();
+        Suits.ResetSuits();
     }
 
     // public static void CheckWinCon()
