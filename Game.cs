@@ -157,7 +157,7 @@ public class Game
             "popad",
             "popfd",
         };
-        _asmHooks.Add(hooks.CreateAsmHook(minikitCountIncreaseHook, (int)(Mod.BaseAddress + 0x41BC69), AsmHookBehaviour.ExecuteAfter).Activate());
+        _asmHooks.Add(hooks.CreateAsmHook(minikitCountIncreaseHook, (int)(Mod.BaseAddress + 0x06FC841), AsmHookBehaviour.ExecuteAfter).Activate());
 
         string[] updateMapIDHook =
         [
