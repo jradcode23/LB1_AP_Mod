@@ -5,6 +5,7 @@ using Reloaded.Hooks.Definitions.Enums;
 using Reloaded.Hooks.Definitions.X86;
 using System.Numerics;
 using LB1_AP_Mod.Configuration;
+using LB1_AP_Mod;
 
 namespace LB1_AP_Mod;
 
@@ -96,7 +97,7 @@ public class Game
     {
         if (MinikitCodeBaseAddress == null)
         {
-            PrintToLog("Please report to a Dev. Minikit Address is Null");
+            Mod.PrintToLog("Please report to a Dev. Minikit Address is Null");
             return;
         }
         byte* mostRecentMinikit = MinikitCodeBaseAddress + (minikitNum * 0x24);
@@ -105,23 +106,23 @@ public class Game
 
         if (string.IsNullOrEmpty(currentCode))
         {
-            PrintToLog("Minikit Code has a null value");
+            ModifyInstructions.PrintToLog("Minikit Code has a null value");
             return;
         }
 
         if (currentCode.Length > MaxLength)
         {
-            PrintToLog("Unexpected Behavior, code exceeded max length");
+            Mod.PrintToLog("Unexpected Behavior, code exceeded max length");
             return;
         }
-        PrintToLog($"Minikit Code: {currentCode}. Map ID is: {Mod.GameInstance!.MapID}. Map Name is: {Mod.GameInstance!.MapName}");
+        Mod.PrintToLog($"Minikit Code: {currentCode}. Map ID is: {Mod.GameInstance!.MapID}. Map Name is: {Mod.GameInstance!.MapName}");
     }
 
     private static unsafe void ClearMinikitCodes()
     {
         if (MinikitCodeBaseAddress == null)
         {
-            PrintToLog("Please report to a Dev. Minikit Address is Null");
+            Mod.PrintToLog("Please report to a Dev. Minikit Address is Null");
             return;
         }
 
