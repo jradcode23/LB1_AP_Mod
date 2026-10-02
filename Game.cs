@@ -91,7 +91,7 @@ public class Game
 
     }
 
-    private static unsafe byte* MinikitCodeBaseAddress => (byte*)(Mod.BaseAddress +  0x006C9428);
+    private static unsafe byte* MinikitCodeBaseAddress => (byte*)(Mod.BaseAddress +  0x6D10E0);
 
     private static unsafe void ReadMinikitValue(uint minikitNum)
     {
@@ -100,9 +100,9 @@ public class Game
             Mod.PrintToLog("Please report to a Dev. Minikit Address is Null");
             return;
         }
-        byte* mostRecentMinikit = MinikitCodeBaseAddress + (minikitNum * 0x24);
+        byte* mostRecentMinikit = MinikitCodeBaseAddress + (minikitNum * 0xC);
         string currentCode = new((sbyte*)mostRecentMinikit); // Read the current message from memory
-        int MaxLength = 24;
+        int MaxLength = 8;
 
         if (string.IsNullOrEmpty(currentCode))
         {
@@ -128,7 +128,7 @@ public class Game
 
         for (int i = 0; i < 10; i++)
         {
-            byte* minikitCode = MinikitCodeBaseAddress + (i * 0x24);
+            byte* minikitCode = MinikitCodeBaseAddress + (i * 0xC);
             *minikitCode = 0x0;
         }
     }
