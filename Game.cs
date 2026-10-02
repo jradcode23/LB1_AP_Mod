@@ -106,7 +106,7 @@ public class Game
 
         if (string.IsNullOrEmpty(currentCode))
         {
-            ModifyInstructions.PrintToLog("Minikit Code has a null value");
+            Mod.PrintToLog("Minikit Code has a null value");
             return;
         }
 
@@ -115,7 +115,7 @@ public class Game
             Mod.PrintToLog("Unexpected Behavior, code exceeded max length");
             return;
         }
-        Mod.PrintToLog($"Minikit Code: {currentCode}. Map ID is: {Mod.GameInstance!.MapID}. Map Name is: {Mod.GameInstance!.MapName}");
+        // Mod.PrintToLog($"Minikit Code: {currentCode}. Map ID is: {Mod.GameInstance!.MapID}. Map Name is: {Mod.GameInstance!.MapName}");
     }
 
     private static unsafe void ClearMinikitCodes()
@@ -268,7 +268,7 @@ public class Game
     private static void OnIncreaseMinikitCount(uint eax)
     {
         uint minikitCount = eax;
-        PrintToLog($"Total Minikits collected: {minikitCount}");
+        Mod.PrintToLog($"Total Minikits collected: {minikitCount}");
         minikitCount -= 1; // Adjust for pointer arithmetic
         ReadMinikitValue(minikitCount);
     }
