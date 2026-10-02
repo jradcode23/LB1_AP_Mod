@@ -91,48 +91,6 @@ public class Game
 
     }
 
-    private static unsafe byte* MinikitCodeBaseAddress => (byte*)(Mod.BaseAddress +  0x6D10E0);
-
-    private static unsafe void ReadMinikitValue(uint minikitNum)
-    {
-        if (MinikitCodeBaseAddress == null)
-        {
-            Mod.PrintToLog("Please report to a Dev. Minikit Address is Null");
-            return;
-        }
-        byte* mostRecentMinikit = MinikitCodeBaseAddress + (minikitNum * 0xC);
-        string currentCode = new((sbyte*)mostRecentMinikit); // Read the current message from memory
-        int MaxLength = 8;
-
-        if (string.IsNullOrEmpty(currentCode))
-        {
-            Mod.PrintToLog("Minikit Code has a null value");
-            return;
-        }
-
-        if (currentCode.Length > MaxLength)
-        {
-            Mod.PrintToLog("Unexpected Behavior, code exceeded max length");
-            return;
-        }
-        // Mod.PrintToLog($"Minikit Code: {currentCode}. Map ID is: {Mod.GameInstance!.MapID}. Map Name is: {Mod.GameInstance!.MapName}");
-    }
-
-    private static unsafe void ClearMinikitCodes()
-    {
-        if (MinikitCodeBaseAddress == null)
-        {
-            Mod.PrintToLog("Please report to a Dev. Minikit Address is Null");
-            return;
-        }
-
-        for (int i = 0; i < 10; i++)
-        {
-            byte* minikitCode = MinikitCodeBaseAddress + (i * 0xC);
-            *minikitCode = 0x0;
-        }
-    }
-
     public static List<IAsmHook> _asmHooks = [];
     private static IReverseWrapper<IncreaseMinikitCount> _reverseWrapOnIncreaseMinikitCount = default!;
     private static IReverseWrapper<UpdateMap> _reverseWrapOnMapUpdate = default!;
@@ -157,7 +115,7 @@ public class Game
             "popad",
             "popfd",
         };
-        _asmHooks.Add(hooks.CreateAsmHook(minikitCountIncreaseHook, (int)(Mod.BaseAddress + 0x0048CCAE), AsmHookBehaviour.ExecuteAfter).Activate());
+        _asmHooks.Add(hooks.CreateAsmHook(minikitCountIncreaseHook, (int)(Mod.BaseAddress + 0x8CCAE), AsmHookBehaviour.ExecuteFirst).Activate());
 
         string[] updateMapIDHook =
         [
@@ -261,16 +219,60 @@ public class Game
 
     }
 
-    [Function([FunctionAttribute.Register.eax],
+    [Function([FunctionAttribute.Register.eax, FunctionAttribute.Register.edx],
     FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
-    public delegate void IncreaseMinikitCount(uint eax);
+    public delegate void IncreaseMinikitCount(uint eax, uint edx);
 
-    private static void OnIncreaseMinikitCount(uint eax)
+    private static void OnIncreaseMinikitCount(uint eax, uint edx)
     {
         uint minikitCount = eax;
-        Mod.PrintToLog($"Total Minikits collected: {minikitCount}");
+        ushort mapId = (ushort)(edx & 0xFFFFu);
+        Mod.PrintToLog($"Total Minikits collected: {minikitCount}. Map ID is: 0x{mapId:X}.");
         minikitCount -= 1; // Adjust for pointer arithmetic
-        ReadMinikitValue(minikitCount);
+        ReadMinikitValue(minikitCount, mapId);
+    }
+
+    private static unsafe byte* MinikitCodeBaseAddress => (byte*)(Mod.BaseAddress + 0x6D10E0);
+
+    private static unsafe void ReadMinikitValue(uint minikitNum, ushort mapId)
+    {
+        if (MinikitCodeBaseAddress == null)
+        {
+            Mod.PrintToLog("Please report to a Dev. Minikit Address is Null");
+            return;
+        }
+        byte* mostRecentMinikit = MinikitCodeBaseAddress + (minikitNum * 0xC);
+        Mod.PrintToLog($"MostRecentMiniki: 0x{(uint)mostRecentMinikit:X}");
+        string currentCode = new((sbyte*)mostRecentMinikit); // Read the current message from memory
+        int MaxLength = 8;
+
+        if (string.IsNullOrEmpty(currentCode))
+        {
+            Mod.PrintToLog("Minikit Code has a null value");
+            return;
+        }
+
+        if (currentCode.Length > MaxLength)
+        {
+            Mod.PrintToLog("Unexpected Behavior, code exceeded max length");
+            return;
+        }
+        Mod.PrintToLog($"Minikit Code: {currentCode}. Map ID is: 0x{mapId:X}.");
+    }
+
+    private static unsafe void ClearMinikitCodes()
+    {
+        if (MinikitCodeBaseAddress == null)
+        {
+            Mod.PrintToLog("Please report to a Dev. Minikit Address is Null");
+            return;
+        }
+
+        for (int i = 0; i < 10; i++)
+        {
+            byte* minikitCode = MinikitCodeBaseAddress + (i * 0xC);
+            *minikitCode = 0x0;
+        }
     }
 
     private static bool IsInHub()
