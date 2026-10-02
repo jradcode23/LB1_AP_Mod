@@ -133,6 +133,7 @@ public class Game
     }
 
     public static List<IAsmHook> _asmHooks = [];
+    private static IReverseWrapper<IncreaseMinikitCount> _reverseWrapOnIncreaseMinikitCount = default!;
     private static IReverseWrapper<UpdateMap> _reverseWrapOnMapUpdate = default!;
     private static IReverseWrapper<OpenMenu> _reverseWrapOnOpenMenu = default!;
     private static IReverseWrapper<CloseMenu> _reverseWrapOnCloseMenu = default!;
@@ -146,6 +147,17 @@ public class Game
     // TODO: Future proof this from game updates by implementing signature scanning
     public void SetupHooks(IReloadedHooks hooks)
     {
+        string[] minikitCountIncreaseHook =
+        {
+            "use32",
+            "pushfd",
+            "pushad",
+            $"{hooks.Utilities.GetAbsoluteCallMnemonics(OnIncreaseMinikitCount, out _reverseWrapOnIncreaseMinikitCount)}",
+            "popad",
+            "popfd",
+        };
+        _asmHooks.Add(hooks.CreateAsmHook(minikitCountIncreaseHook, (int)(Mod.BaseAddress + 0x41BC69), AsmHookBehaviour.ExecuteAfter).Activate());
+
         string[] updateMapIDHook =
         [
             "use32",
@@ -246,6 +258,18 @@ public class Game
         // Change Suit that the signal is showing in a level
         _asmHooks.Add(hooks.CreateAsmHook(changeSuitSignalHook, (int)(Mod.BaseAddress + 0xF0818), AsmHookBehaviour.ExecuteFirst).Activate());
 
+    }
+
+    [Function([FunctionAttribute.Register.eax],
+    FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
+    public delegate void IncreaseMinikitCount(uint eax);
+
+    private static void OnIncreaseMinikitCount(uint eax)
+    {
+        uint minikitCount = eax;
+        PrintToLog($"Total Minikits collected: {minikitCount}");
+        minikitCount -= 1; // Adjust for pointer arithmetic
+        ReadMinikitValue(minikitCount);
     }
 
     private static bool IsInHub()
