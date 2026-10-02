@@ -90,6 +90,48 @@ public class Game
 
     }
 
+    private static unsafe byte* MinikitCodeBaseAddress => (byte*)(Mod.BaseAddress +  0x006C9428);
+
+    private static unsafe void ReadMinikitValue(uint minikitNum)
+    {
+        if (MinikitCodeBaseAddress == null)
+        {
+            PrintToLog("Please report to a Dev. Minikit Address is Null");
+            return;
+        }
+        byte* mostRecentMinikit = MinikitCodeBaseAddress + (minikitNum * 0x24);
+        string currentCode = new((sbyte*)mostRecentMinikit); // Read the current message from memory
+        int MaxLength = 24;
+
+        if (string.IsNullOrEmpty(currentCode))
+        {
+            PrintToLog("Minikit Code has a null value");
+            return;
+        }
+
+        if (currentCode.Length > MaxLength)
+        {
+            PrintToLog("Unexpected Behavior, code exceeded max length");
+            return;
+        }
+        PrintToLog($"Minikit Code: {currentCode}. Map ID is: {Mod.GameInstance!.MapID}. Map Name is: {Mod.GameInstance!.MapName}");
+    }
+
+    private static unsafe void ClearMinikitCodes()
+    {
+        if (MinikitCodeBaseAddress == null)
+        {
+            PrintToLog("Please report to a Dev. Minikit Address is Null");
+            return;
+        }
+
+        for (int i = 0; i < 10; i++)
+        {
+            byte* minikitCode = MinikitCodeBaseAddress + (i * 0x24);
+            *minikitCode = 0x0;
+        }
+    }
+
     public static List<IAsmHook> _asmHooks = [];
     private static IReverseWrapper<UpdateMap> _reverseWrapOnMapUpdate = default!;
     private static IReverseWrapper<OpenMenu> _reverseWrapOnOpenMenu = default!;
