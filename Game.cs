@@ -97,6 +97,8 @@ public class Game
     private static IReverseWrapper<NewGameCutscene> _reverseWrapOnNewGameCutscene = default!;
     private static IReverseWrapper<HostageRescue> _reverseWrapOnHostageRescue = default!;
     private static IReverseWrapper<TrueSuperHero> _reverseWrapOnTrueSuperHero = default!;
+    private static IReverseWrapper<ChangeSuitWorn> _reverseWrapOnChangeSuitWorn = default!;
+    private static IReverseWrapper<ChangeSuitSignal> _reverseWrapOnChangeSuitSignal = default!;
 
     // Modifying the associated assembly of our game to call our functions
     // TODO: Future proof this from game updates by implementing signature scanning
@@ -167,6 +169,41 @@ public class Game
             "popfd",
         };
         _asmHooks.Add(hooks.CreateAsmHook(trueSuperHeroHook, (int)(Mod.BaseAddress + 0xDC35B), AsmHookBehaviour.ExecuteAfter).Activate());
+
+        string[] changeSuitWornHook =
+        {
+            "use32",
+            "pushfd",
+            "pushad",
+            $"{hooks.Utilities.GetAbsoluteCallMnemonics(OnChangeSuitWorn, out _reverseWrapOnChangeSuitWorn)}",
+            "popad",
+            "popfd",
+        };
+        _asmHooks.Add(hooks.CreateAsmHook(changeSuitWornHook, (int)(Mod.BaseAddress + 0xF241D), AsmHookBehaviour.ExecuteFirst).Activate()); // Change Suit that the person is wearing
+
+        string[] changeSuitSignalHook =
+        {
+            // Push and Pop all Registers except for the EAX register since we need to adjust it in our function
+            "use32",
+            "pushfd",
+            "push ebx",
+            "push ecx",
+            "push edx",
+            "push esi",
+            "push edi",
+            "push ebp",
+            $"{hooks.Utilities.GetAbsoluteCallMnemonics(OnChangeSuitSignal, out _reverseWrapOnChangeSuitSignal)}",
+            "pop ebp",
+            "pop edi",
+            "pop esi",
+            "pop edx",
+            "pop ecx",
+            "pop ebx",
+            "popfd",
+        };
+        // Change Suit that the signal is showing in a level
+        _asmHooks.Add(hooks.CreateAsmHook(changeSuitSignalHook, (int)(Mod.BaseAddress + 0xF0818), AsmHookBehaviour.ExecuteFirst).Activate());
+
     }
 
     private static bool IsInHub()
@@ -191,12 +228,14 @@ public class Game
         // TODO: This code may be a little repetive right now with the subsequent functions, once other items are implemented, can see what we want to do
         if (IsInHub())
         {
+            Mod.LB1_AP!.UpdateBasedOnLocations(SuitOffset, MinikitOffset - 1);
             Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, LevelOffset - 1);
             Mod.LB1_AP!.UpdateBasedOnItems(LevelOffset, TrueSuperHeroOffset - 1);
             Mod.LB1_AP!.UpdateBasedOnLocations(TrueSuperHeroOffset, RedBrickOffset - 1);
         }
         else
         {
+            Mod.LB1_AP!.UpdateBasedOnItems(SuitOffset, MinikitOffset - 1);
             Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, RedBrickOffset - 1);
         }
     }
@@ -219,13 +258,14 @@ public class Game
             ResetItems();
             Mod.GameInstance!.isMenuOpen = true;
             Mod.PrintToLog("Menu or Level Selector In Hub Opened");
-            Mod.LB1_AP!.UpdateBasedOnItems(HostageOffset, RedBrickOffset - 1);
+            Mod.LB1_AP!.UpdateBasedOnItems(SuitOffset, RedBrickOffset - 1);
         }
         else if (Mod.GameInstance!.MapID != 0 && LevelHandler.CheckStatusMap(Mod.GameInstance!.MapID) == -1)
         {
             ResetItems();
             Mod.GameInstance!.isMenuOpen = true;
             Mod.PrintToLog("Menu or Level Selector In Level Opened");
+            Mod.LB1_AP!.UpdateBasedOnItems(SuitOffset, MinikitOffset - 1);
             Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, RedBrickOffset - 1);
         }
     }
@@ -240,6 +280,7 @@ public class Game
             ResetItems();
             if (IsInHub())
             {
+                Mod.LB1_AP!.UpdateBasedOnLocations(SuitOffset, MinikitOffset - 1);
                 Mod.PrintToLog("Menu or Level Selector In Hub Closed");
                 Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, LevelOffset - 1);
                 Mod.LB1_AP!.UpdateBasedOnItems(LevelOffset, TrueSuperHeroOffset - 1);
@@ -247,6 +288,7 @@ public class Game
             }
             else
             {
+                Mod.LB1_AP!.UpdateBasedOnItems(SuitOffset, MinikitOffset - 1);
                 Mod.PrintToLog("Menu or Level Selector In Level Closed");
                 Mod.LB1_AP!.UpdateBasedOnLocations(RedBrickOffset, TrueSuperHeroOffset - 1);
             }
@@ -284,6 +326,49 @@ public class Game
         {
             CheckAndReportLocation(archiID + TrueSuperHeroOffset);
         }
+    }
+
+    [Function([FunctionAttribute.Register.edx],
+    FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
+    public delegate void ChangeSuitWorn(ushort edx);
+    private static void OnChangeSuitWorn(ushort edx)
+    {
+        Mod.PrintToLog($"Worn Suit Changed. edx is: 0x{edx:X}");
+        if (!IsInHub())
+        {
+            int archiId = Suits.GetSuitID(edx);
+            if ((archiId > 0 && archiId < 5) || (archiId > 5 && archiId < 10))
+                CheckAndReportLocation(archiId + SuitOffset);
+        }
+    }
+
+    [Function([FunctionAttribute.Register.eax,],
+    FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
+    public delegate uint ChangeSuitSignal(uint eax);
+    private static uint OnChangeSuitSignal(uint eax)
+    {
+        Mod.PrintToLog($"Suit Signal Changed. eax is: 0x{eax:X}");
+        if (eax == 0)
+        {
+            // TODO: If this works, break it into a function to avoid duplicate code
+            ushort blockedCode = Suits.GetSuitCode(10);
+            eax = (eax & 0xFFFF0000u) | blockedCode;
+            Mod.PrintToLog($"Suit is not unlocked. Blocking. Blocked Code: 0x{blockedCode:X}. eax: 0x{eax:X}");
+        }
+        ushort shortenedCode = (ushort)eax;
+        int archiId = Suits.GetSuitID(shortenedCode);
+        if (archiId == 0 || archiId == 5 || archiId == 10) // Suit is Bat Suit, Robin Suit or default (unknown)
+        {
+            return eax;
+        }
+        bool isUnlocked = Mod.LB1_AP!.CountItemsReceivedWithId(archiId + SuitOffset) > 0;
+        if (!isUnlocked)
+        {
+            ushort blockedCode = Suits.GetSuitCode(10);
+            eax = (eax & 0xFFFF0000u) | blockedCode;
+            Mod.PrintToLog($"Suit is not unlocked. Blocking. Blocked Code: 0x{blockedCode:X}. eax: 0x{eax:X}");
+        }
+        return eax;
     }
 
     public static void CheckAndReportLocation(int apID)

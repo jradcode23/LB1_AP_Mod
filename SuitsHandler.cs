@@ -4,84 +4,80 @@ public class Suits
 {
     private enum SuitName
     {
-        Bat_Suit,
-        Heat_Suit,
-        Glide_Suit,
-        Demo_Suit,
-        Sonar_Suit,
+        BatSuit,
+        HeatSuit,
+        GlideSuit,
+        DemoSuit,
+        SonicSuit,
 
-        Robin_Suit,
-        Dive_Suit,
-        Tech_Suit,
-        Magnet_Suit,
-        Attracto_Suit,
+        RobinSuit,
+        DiveSuit,
+        TechSuit,
+        MagnetSuit,
+        AttractSuit,
 
-        Blocked_Suit
+        BlockedSuit
     };
 
-    private enum SuitID : ushort
+    private enum SuitCode : ushort
     {
-        Bat_SuitID = 0x7608,
-        Heat_SuitID = 0x7658,
-        Glide_SuitID = 0x76A8,
-        Demo_SuitID = 0x76F8,
-        Sonar_SuitID = 0x7748,
-        Robin_SuitID = 0x7798,
-        Dive_SuitID = 0x77E8,
-        Tech_SuitID = 0x7838,
-        Magnet_SuitID = 0x7888,
-        Attracto_SuitID = 0x78D8,
-        Blocked_SuitID = 0xD628 // this likely points to something that coincidentally makes a suit that can't be worn.
+        BatSuitCode = 0x7608,
+        HeatSuitCode = 0x7658,
+        GlideSuitCode = 0x76A8,
+        DemoSuitCode = 0x76F8,
+        SonicSuitCode = 0x7748,
+        RobinSuitCode = 0x7798,
+        DiveSuitCode = 0x77E8,
+        TechSuitCode = 0x7838,
+        MagnetSuitCode = 0x7888,
+        AttractSuitCode = 0x78D8,
+        BlockedSuitCode = 0xD628 // this likely points to something that coincidentally makes a suit that can't be worn.
     };
 
-    private SuitName SuitIDtoSuitName(uint id)
+    public static int GetSuitID(uint id)
     {
-        return SuitIDtoSuitName((SuitID)id);
+        return (int)SuitCodeToSuitId((SuitCode)id);
     }
 
-    private SuitName SuitIDtoSuitName(SuitID id)
+    private static SuitName SuitCodeToSuitId(SuitCode id)
     {
-        switch (id)
+        return id switch
         {
-            case SuitID.Bat_SuitID: return SuitName.Bat_Suit;
-            case SuitID.Heat_SuitID: return SuitName.Heat_Suit;
-            case SuitID.Glide_SuitID: return SuitName.Glide_Suit;
-            case SuitID.Demo_SuitID: return SuitName.Demo_Suit;
-            case SuitID.Sonar_SuitID: return SuitName.Sonar_Suit;
-
-            case SuitID.Robin_SuitID: return SuitName.Robin_Suit;
-            case SuitID.Dive_SuitID: return SuitName.Dive_Suit;
-            case SuitID.Tech_SuitID: return SuitName.Tech_Suit;
-            case SuitID.Magnet_SuitID: return SuitName.Magnet_Suit;
-            case SuitID.Attracto_SuitID: return SuitName.Attracto_Suit;
-
-            default: return SuitName.Blocked_Suit;
-        }
+            SuitCode.BatSuitCode => SuitName.BatSuit,
+            SuitCode.HeatSuitCode => SuitName.HeatSuit,
+            SuitCode.GlideSuitCode => SuitName.GlideSuit,
+            SuitCode.DemoSuitCode => SuitName.DemoSuit,
+            SuitCode.SonicSuitCode => SuitName.SonicSuit,
+            SuitCode.RobinSuitCode => SuitName.RobinSuit,
+            SuitCode.DiveSuitCode => SuitName.DiveSuit,
+            SuitCode.TechSuitCode => SuitName.TechSuit,
+            SuitCode.MagnetSuitCode => SuitName.MagnetSuit,
+            SuitCode.AttractSuitCode => SuitName.AttractSuit,
+            _ => SuitName.BlockedSuit,
+        };
     }
 
-    private SuitID SuitNametoSuitID(uint name)
+    public static ushort GetSuitCode(uint id)
     {
-        return SuitNametoSuitID((SuitName)name);
+        return (ushort)SuitNameToSuitCode(id);
     }
 
-    private SuitID SuitNametoSuitID(SuitName name)
+    private static SuitCode SuitNameToSuitCode(uint name)
     {
-        switch (name)
+        return (SuitName)name switch
         {
-            case SuitName.Bat_Suit: return SuitID.Bat_SuitID;
-            case SuitName.Heat_Suit: return SuitID.Heat_SuitID;
-            case SuitName.Glide_Suit: return SuitID.Glide_SuitID;
-            case SuitName.Demo_Suit: return SuitID.Demo_SuitID;
-            case SuitName.Sonar_Suit: return SuitID.Sonar_SuitID;
-
-            case SuitName.Robin_Suit: return SuitID.Robin_SuitID;
-            case SuitName.Dive_Suit: return SuitID.Dive_SuitID;
-            case SuitName.Tech_Suit: return SuitID.Tech_SuitID;
-            case SuitName.Magnet_Suit: return SuitID.Magnet_SuitID;
-            case SuitName.Attracto_Suit: return SuitID.Attracto_SuitID;
-
-            default: return SuitID.Blocked_SuitID;
-        }
+            SuitName.BatSuit => SuitCode.BatSuitCode,
+            SuitName.HeatSuit => SuitCode.HeatSuitCode,
+            SuitName.GlideSuit => SuitCode.GlideSuitCode,
+            SuitName.DemoSuit => SuitCode.DemoSuitCode,
+            SuitName.SonicSuit => SuitCode.SonicSuitCode,
+            SuitName.RobinSuit => SuitCode.RobinSuitCode,
+            SuitName.DiveSuit => SuitCode.DiveSuitCode,
+            SuitName.TechSuit => SuitCode.TechSuitCode,
+            SuitName.MagnetSuit => SuitCode.MagnetSuitCode,
+            SuitName.AttractSuit => SuitCode.AttractSuitCode,
+            _ => SuitCode.BlockedSuitCode,
+        };
     }
 
     private const byte DefaultSuitUnlockMask = 0x21; // Bit mask that has only Batsuit & Robin suit unlocked
@@ -90,10 +86,14 @@ public class Suits
     private static unsafe byte* SuitUnlocks2 => (byte*)(Mod.BaseAddress + 0x6CA450);
     private static unsafe byte* SuitUnlocks3 => (byte*)(Mod.BaseAddress + 0x5CA294);
 
-    public static unsafe void UnlockSuit(int ID)
+    public static unsafe void UnlockSuit(int id)
     {
-        int byteOffset = ID / 8;
-        int bitOffset = ID % 8;
+        if (id > 10)
+        {
+            return;
+        }
+        int byteOffset = id / 8;
+        int bitOffset = id % 8;
         *(SuitUnlocks1 + byteOffset) |= (byte)(1 << bitOffset);
         *(SuitUnlocks2 + byteOffset) |= (byte)(1 << bitOffset);
         *(SuitUnlocks3 + byteOffset) |= (byte)(1 << bitOffset);
