@@ -306,6 +306,7 @@ public class Game
         // TODO: This code may be a little repetive right now with the subsequent functions, once other items are implemented, can see what we want to do
         if (IsInHub())
         {
+            ClearMinikitCodes();
             Mod.LB1_AP!.UpdateBasedOnLocations(SuitOffset, MinikitOffset - 1);
             Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, LevelOffset - 1);
             Mod.LB1_AP!.UpdateBasedOnItems(LevelOffset, TrueSuperHeroOffset - 1);
