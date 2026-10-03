@@ -243,6 +243,8 @@ public class Game
         }
         byte* mostRecentMinikit = MinikitCodeBaseAddress + (minikitNum * 0xC);
         Mod.PrintToLog($"MostRecentMiniki: 0x{(uint)mostRecentMinikit:X}");
+        
+        
         string currentCode = new((sbyte*)mostRecentMinikit); // Read the current message from memory
         int MaxLength = 8;
 
@@ -258,6 +260,12 @@ public class Game
             return;
         }
         Mod.PrintToLog($"Minikit Code: {currentCode}. Map ID is: 0x{mapId:X}.");
+
+        if (MinikitHandler.kitTable.TryGetValue((mapId, currentCode), out int kitId))
+        {
+            CheckAndReportLocation(kitId + MinikitOffset);
+        }       
+        
     }
 
     private static unsafe void ClearMinikitCodes()
