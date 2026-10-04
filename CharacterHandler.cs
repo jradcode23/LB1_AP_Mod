@@ -4,8 +4,64 @@ namespace LB1_AP_Mod;
 
 public class CharacterHandler
 {
+    public static readonly uint characterCount = 48 + 12 + 10 + 10 + 1;
+    public static readonly uint characterShopCount = 53;
+
 	private static unsafe byte* characterBaseAddress => *(byte**)(Mod.BaseAddress + 0x6CB30);
     private static readonly byte unlockOffset = 0xE4;
+
+    public unsafe byte*[] _characterBytes = new byte*[characterCount];
+    public bool[] token = new bool[characterCount];
+    public bool[] purchased = new bool[characterCount];
+    public bool[] unlocked = new bool[characterCount];
+
+    public static IntPtr vanillaShopCharacter(IntPtr i)
+    {
+        bool isVanilla = true;
+        if (!isVanilla) return i;
+
+        if (i > 1 && i < 15)
+        {
+            return i-2;
+        } 
+        else if (i == 22)
+        {
+            return 13;
+        }
+        else if (i == 24)
+        {
+            return 14;
+        }
+        else if (i == 29)
+        {
+            return 15;
+        }
+        else if (i > 30 && i < 46)
+        {
+            return 16 + (i-31);
+        }
+        else if (i > 49 && i < 60)
+        {
+            return 31 + (i-49);
+        }
+        else if (i > 61 && i < 65)
+        {
+            return 41 + (i-61);
+        }
+        else if (i > 66 && i < 70)
+        {
+            return 45 + (i-61);
+        }
+        else if (i > 71 && i < 75)
+        {
+            return 47 + (i-71);
+        }
+        else
+        {
+            return -1;
+        }
+    }
+
 
 	public static readonly Dictionary<int, int> characterMap = new()
 	{
@@ -107,6 +163,7 @@ public class CharacterHandler
         {78, 0x03},
     };
 
+
     // Returns the offset when searching the ID
     public static int GetCharacterByteOffset(int id)
     {
@@ -128,5 +185,32 @@ public class CharacterHandler
         int value = (int)byteIndex;
         var kvp = characterMap.FirstOrDefault(k => k.Value == value);
         return kvp.Equals(default(KeyValuePair<int, int>)) ? -1 : kvp.Key;
+    }
+
+    public unsafe void PurchaseLocks(IntPtr i)
+    {
+        Mod.PrintToLog($"hegesdgf{i}");
+        if (vanillaShopCharacter(i) == -1) return;
+        // PurchaseLocks(i, lb1AP_location[i]);
+    }
+
+    public unsafe void PurchaseLocks(IntPtr i, bool locked)
+    {
+        i = vanillaShopCharacter(i);
+        if (i == -1) return;
+        Mod.PrintToLog($"wollup{i} lock {locked}");
+        uint addr = Mod.BaseAddress + 0x560894 - 0x1000;
+        Mod.PrintToLog("d");
+        addr = *(uint*)(*(uint*)addr + 0x5380);
+        if (addr == 0)
+        {
+            Mod.PrintToLog("ERR: purchase locks being called outside of shoproom");
+            return;
+        }
+        Mod.PrintToLog($"c");
+        addr = *(uint*)(addr + 0xC7C);
+        Mod.PrintToLog($"b");
+        addr += (uint)((i * 0x74) + 0x63);
+        *(byte*)addr = locked ? (byte)1 : (byte)0;
     }
 }

@@ -67,6 +67,7 @@ public class Game
     private const int LevelOffset = 425;
     private const int TrueSuperHeroOffset = 455;
     private const int RedBrickOffset = 485;
+    private const int CharacterOffset = 2306;
     public static void ManageItem(int itemID)
     {
         switch (itemID)
@@ -93,6 +94,7 @@ public class Game
 
     public static List<IAsmHook> _asmHooks = [];
     private static IReverseWrapper<IncreaseMinikitCount> _reverseWrapOnIncreaseMinikitCount = default!;
+    private static IReverseWrapper<CharacterUnlock> _reverseWrapOnCharacterUnlock = default!;
     private static IReverseWrapper<UpdateMap> _reverseWrapOnMapUpdate = default!;
     private static IReverseWrapper<OpenMenu> _reverseWrapOnOpenMenu = default!;
     private static IReverseWrapper<CloseMenu> _reverseWrapOnCloseMenu = default!;
@@ -116,6 +118,17 @@ public class Game
             "popfd",
         };
         _asmHooks.Add(hooks.CreateAsmHook(minikitCountIncreaseHook, (int)(Mod.BaseAddress + 0x8CCAE), AsmHookBehaviour.ExecuteFirst).Activate());
+
+        string[] characterUnlockHook =
+        {
+            "use32",
+            "pushfd",
+            "pushad",
+            $"{hooks.Utilities.GetAbsoluteCallMnemonics(OnCharacterUnlock, out _reverseWrapOnCharacterUnlock)}",
+            "popad",
+            "popfd",
+        };
+        _asmHooks.Add(hooks.CreateAsmHook(characterUnlockHook, (int)(Mod.BaseAddress + 0xB0F9A), AsmHookBehaviour.ExecuteFirst).Activate());
 
         string[] updateMapIDHook =
         [
@@ -284,6 +297,22 @@ public class Game
         }
     }
 
+    [Function([FunctionAttribute.Register.edx],
+    FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
+
+    public delegate void CharacterUnlock(uint edx);
+
+    private static void OnCharacterUnlock(uint edx)
+    {
+        int archiID = CharacterHandler.GetPurchaseCharacterID((IntPtr)edx, 0x0);
+        Mod.PrintToLog($"Character Unlocked: {archiID}");
+        if (archiID != -1)
+        {
+            CheckAndReportLocation(archiID + CharacterOffset);
+        }
+    }
+
+
     private static bool IsInHub()
     {
         return HubMapIDs.Contains(Mod.GameInstance!.MapID);
@@ -310,6 +339,7 @@ public class Game
             Mod.LB1_AP!.UpdateBasedOnLocations(SuitOffset, MinikitOffset - 1);
             Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, LevelOffset - 1);
             Mod.LB1_AP!.UpdateBasedOnItems(LevelOffset, TrueSuperHeroOffset - 1);
+            Mod.LB1_AP!.UpdateBasedOnItems(CharacterOffset, SuitOffset - 1);
             Mod.LB1_AP!.UpdateBasedOnLocations(TrueSuperHeroOffset, RedBrickOffset - 1);
         }
         else
