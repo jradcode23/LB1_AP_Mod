@@ -18,7 +18,7 @@ public class ArchipelagoHandler
     private ArchipelagoSession? _session;
     public ArchipelagoSession Session => _session ?? throw new InvalidOperationException("Session has not been initialized.");
     private LoginSuccessful? _loginSuccessful;
-    // public SlotData? SlotDataInstance;
+    public SlotData? SlotDataInstance;
     // public static DateTime LastDeathLinkPacketTime = DateTime.Now;
     private string Server { get; set; }
     private int Port { get; set; }
@@ -32,8 +32,8 @@ public class ArchipelagoHandler
     public static readonly int gameOffset = 400000;
 
     private Thread? _locationsThread;
-    private Thread? _hintThread;
-    private Thread? _queuedItemsThread;
+    // private Thread? _hintThread;
+    // private Thread? _queuedItemsThread;
 
     public ArchipelagoHandler(string server, int port, string slot, string password)
     {
@@ -52,7 +52,7 @@ public class ArchipelagoHandler
         _session.Socket.SocketClosed += OnSocketClosed;
         _session.Socket.ErrorReceived += OnSessionErrorReceived;
         // _session.Socket.PacketReceived += PacketReceived;
-        // _session.Items.ItemReceived += ItemReceived;
+        _session.Items.ItemReceived += ItemReceived;
     }
 
     public void InitConnect()
@@ -125,8 +125,8 @@ public class ArchipelagoHandler
         {
             _loginSuccessful = (LoginSuccessful)result;
             // Sets up slot Data
-            // SlotDataInstance = new(_loginSuccessful.SlotData);
-            // SlotDataInstance.PrintData();
+            SlotDataInstance = new(_loginSuccessful.SlotData);
+            SlotDataInstance.PrintData();
             // var locationIDs = BuildLocationIds();
             // var scouting = Session.Locations.ScoutLocationsAsync(HintCreationPolicy.None, locationIDs);
             // HintSystem.UpdateConnectionStatusText("Hooking, Please Wait");
