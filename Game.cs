@@ -24,6 +24,7 @@ public class Game
         }
         Mod.GameInstance!.MapID = *mapPointer;
         Mod.PrintToLog($"Initial Map Address is: {*mapPointer}");
+        Mod.LB1_AP!.SendMapID(*mapPointer);
     }
 
     // Used to check if the game menu is loaded before connecting and trying to set up hooks
@@ -128,7 +129,7 @@ public class Game
             "popad",
             "popfd",
         };
-        _asmHooks.Add(hooks.CreateAsmHook(characterUnlockHook, (int)(Mod.BaseAddress + 0xB0F9A), AsmHookBehaviour.ExecuteFirst).Activate());
+        // _asmHooks.Add(hooks.CreateAsmHook(characterUnlockHook, (int)(Mod.BaseAddress + 0xB0F9A), AsmHookBehaviour.ExecuteFirst).Activate());
 
         string[] updateMapIDHook =
         [
@@ -332,6 +333,7 @@ public class Game
             CheckAndReportLocation(levelCompletedID + LevelOffset);
         }
         ResetItems();
+        Mod.LB1_AP!.SendMapID(Mod.GameInstance!.MapID);
         // TODO: This code may be a little repetive right now with the subsequent functions, once other items are implemented, can see what we want to do
         if (IsInHub())
         {

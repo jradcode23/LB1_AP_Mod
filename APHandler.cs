@@ -134,8 +134,6 @@ public class ArchipelagoHandler
             bool isHooked = Mod.InitOnMenu();
             // Store our slot name in game to access later
             // Mod.GameInstance!.PlayerName = Slot;
-            // Tell DataStorage we are on the menu
-            // Session.DataStorage[Scope.Slot, "map"] = 402;
             // if (isHooked)
             // {
             //     HintSystem.UpdateConnectionStatusText("Ready to Play");
@@ -409,6 +407,12 @@ public class ArchipelagoHandler
             var targetId = gameId + gameOffset;
             return Session.Items.AllItemsReceived.Count(item => item.ItemId == targetId);
         }
+    }
+
+    // We pass the Map ID to data storage for auto tracking purposes
+    public void SendMapID(int MapID)
+    {
+        Session.DataStorage[Scope.Slot, "map"] = MapID;
     }
 
     // Helper function to help determine what type of item (progression/Trap/Filler) was sent/received. Used to determine the in game text color.
