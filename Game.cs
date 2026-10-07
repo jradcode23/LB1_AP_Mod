@@ -13,6 +13,7 @@ public class Game
 {
     private ushort MapID = 0;
     public bool isMenuOpen = false;
+    public bool isShopOpen = false;
     // After Connecting, this function reads initial game variables and NOPs code that we don't want running
     public static unsafe void ModifyInstructions()
     {
@@ -68,7 +69,7 @@ public class Game
     private const int LevelOffset = 425;
     private const int TrueSuperHeroOffset = 455;
     private const int RedBrickOffset = 485;
-    private const int CharacterOffset = 2306;
+    private const int MaxItemID = 521;
     public static void ManageItem(int itemID)
     {
         switch (itemID)
@@ -88,6 +89,9 @@ public class Game
                 break;
             case < RedBrickOffset: // Handle True Super Hero
                 LevelHandler.UnlockTrueSuperHero(itemID - TrueSuperHeroOffset);
+                break;
+            case < MaxItemID: // Handle Red Brick
+                RedBrick.UnlockExtra(itemID - RedBrickOffset);
                 break;
         }
 
@@ -144,12 +148,16 @@ public class Game
 
         string[] openMenuHook =
         [
+            // Move EBP Because we need it for our function
             "use32",
+            "push ecx",
+            "mov ecx, ebp",
             "pushfd",
             "pushad",
             $"{hooks.Utilities.GetAbsoluteCallMnemonics(OnOpenMenu, out _reverseWrapOnOpenMenu)}",
             "popad",
             "popfd",
+            "pop ecx",
         ];
         _asmHooks.Add(hooks.CreateAsmHook(openMenuHook, Mod.BaseAddress + 0x2BF6E3, AsmHookBehaviour.ExecuteFirst).Activate());
 
@@ -309,7 +317,7 @@ public class Game
         Mod.PrintToLog($"Character Unlocked: {archiID}");
         if (archiID != -1)
         {
-            CheckAndReportLocation(archiID + CharacterOffset);
+            CheckAndReportLocation(archiID);
         }
     }
 
@@ -338,44 +346,63 @@ public class Game
         if (IsInHub())
         {
             ClearMinikitCodes();
-            Mod.LB1_AP!.UpdateBasedOnLocations(SuitOffset, MinikitOffset - 1);
+            Mod.LB1_AP!.UpdateBasedOnLocations(0, MinikitOffset - 1);
+            Mod.LB1_AP!.UpdateBasedOnItems(MinikitOffset, HostageOffset - 1);
             Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, LevelOffset - 1);
             Mod.LB1_AP!.UpdateBasedOnItems(LevelOffset, TrueSuperHeroOffset - 1);
-            Mod.LB1_AP!.UpdateBasedOnItems(CharacterOffset, SuitOffset - 1);
             Mod.LB1_AP!.UpdateBasedOnLocations(TrueSuperHeroOffset, RedBrickOffset - 1);
+            Mod.LB1_AP!.UpdateBasedOnItems(RedBrickOffset, MaxItemID);
         }
         else
         {
             Mod.LB1_AP!.UpdateBasedOnItems(SuitOffset, MinikitOffset - 1);
             Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, RedBrickOffset - 1);
+            Mod.LB1_AP!.UpdateBasedOnItems(TrueSuperHeroOffset, MaxItemID);
         }
     }
 
     private static readonly ushort[] HubMapIDs = [0x9, 0xA, 0x5];
 
-    [Function([FunctionAttribute.Register.edx],
+    [Function([FunctionAttribute.Register.edx, FunctionAttribute.Register.ecx],
     FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
-    public delegate void OpenMenu(ushort edx);
-    private static void OnOpenMenu(ushort edx)
+    public delegate void OpenMenu(ushort edx, byte ecx);
+    private static void OnOpenMenu(ushort edx, byte ecx)
     {
 
-        if (edx != 1)
+        // ecx: 0x21 is menu, 0x2C is shop, & 0x2F is level
+        if (edx != 1 || Mod.GameInstance!.MapID == 0)
         {
             return;
         }
-
-        if (IsInHub())
+        Mod.PrintToLog($"ecx is: 0x{ecx:X}");
+        if (IsInHub() && ecx == 0x21) // Open menu
         {
             ResetItems();
             Mod.GameInstance!.isMenuOpen = true;
-            Mod.PrintToLog("Menu or Level Selector In Hub Opened");
-            Mod.LB1_AP!.UpdateBasedOnItems(SuitOffset, RedBrickOffset - 1);
+            Mod.PrintToLog("Menu In Hub Opened");
+            Mod.LB1_AP!.UpdateBasedOnItems(0, MaxItemID);
         }
-        else if (Mod.GameInstance!.MapID != 0 && LevelHandler.CheckStatusMap(Mod.GameInstance!.MapID) == -1)
+        else if (IsInHub() && ecx == 0x2C) // Open Shop
+        {
+            ResetItems();
+            Mod.GameInstance!.isShopOpen = true;
+            Mod.PrintToLog("Shop In Hub Opened");
+            Mod.LB1_AP!.UpdateBasedOnLocations(0, MaxItemID);
+        }
+        else if (IsInHub() && ecx == 0x2F) // Open Level Selector
+        {
+            Mod.PrintToLog("Level Selector In Hub Opened");
+            Mod.LB1_AP!.UpdateBasedOnLocations(0, MinikitOffset - 1);
+            Mod.LB1_AP!.UpdateBasedOnItems(MinikitOffset, HostageOffset - 1);
+            Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, LevelOffset - 1);
+            Mod.LB1_AP!.UpdateBasedOnItems(LevelOffset, TrueSuperHeroOffset - 1);
+            Mod.LB1_AP!.UpdateBasedOnLocations(TrueSuperHeroOffset, MaxItemID);
+        }
+        else if (LevelHandler.CheckStatusMap(Mod.GameInstance!.MapID) == -1)
         {
             ResetItems();
             Mod.GameInstance!.isMenuOpen = true;
-            Mod.PrintToLog("Menu or Level Selector In Level Opened");
+            Mod.PrintToLog("Menu in Level Opened");
             Mod.LB1_AP!.UpdateBasedOnItems(SuitOffset, MinikitOffset - 1);
             Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, RedBrickOffset - 1);
         }
@@ -385,23 +412,25 @@ public class Game
     public delegate void CloseMenu();
     private static void OnCloseMenu()
     {
-        if (Mod.GameInstance!.isMenuOpen)
+        if (Mod.GameInstance!.isMenuOpen || Mod.GameInstance!.isShopOpen)
         {
             Mod.GameInstance!.isMenuOpen = false;
+            Mod.GameInstance!.isShopOpen = false;
             ResetItems();
             if (IsInHub())
             {
-                Mod.LB1_AP!.UpdateBasedOnLocations(SuitOffset, MinikitOffset - 1);
-                Mod.PrintToLog("Menu or Level Selector In Hub Closed");
+                Mod.LB1_AP!.UpdateBasedOnLocations(0, MinikitOffset - 1);
+                Mod.LB1_AP!.UpdateBasedOnItems(MinikitOffset, HostageOffset - 1);
                 Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, LevelOffset - 1);
                 Mod.LB1_AP!.UpdateBasedOnItems(LevelOffset, TrueSuperHeroOffset - 1);
                 Mod.LB1_AP!.UpdateBasedOnLocations(TrueSuperHeroOffset, RedBrickOffset - 1);
+                Mod.LB1_AP!.UpdateBasedOnItems(RedBrickOffset, MaxItemID);
             }
             else
             {
-                Mod.LB1_AP!.UpdateBasedOnItems(SuitOffset, MinikitOffset - 1);
-                Mod.PrintToLog("Menu or Level Selector In Level Closed");
-                Mod.LB1_AP!.UpdateBasedOnLocations(RedBrickOffset, TrueSuperHeroOffset - 1);
+                Mod.LB1_AP!.UpdateBasedOnItems(0, MinikitOffset - 1);
+                Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, RedBrickOffset - 1);
+                Mod.LB1_AP!.UpdateBasedOnItems(TrueSuperHeroOffset, MaxItemID);
             }
         }
     }
@@ -499,6 +528,7 @@ public class Game
         LevelHandler.ResetHostages();
         LevelHandler.ResetTrueSuperHeroes();
         Suits.ResetSuits();
+        RedBrick.ResetRedBricks();
     }
 
     // public static void CheckWinCon()
