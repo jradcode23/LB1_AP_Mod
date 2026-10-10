@@ -68,7 +68,7 @@ public class Game
     private const int HostageOffset = 400;
     private const int LevelOffset = 425;
     private const int TrueSuperHeroOffset = 455;
-    private const int RedBrickOffset = 485;
+    public const int RedBrickOffset = 485;
     private const int MaxItemID = 521;
     public static void ManageItem(int itemID)
     {
@@ -91,7 +91,7 @@ public class Game
                 LevelHandler.UnlockTrueSuperHero(itemID - TrueSuperHeroOffset);
                 break;
             case < MaxItemID: // Handle Red Brick
-                RedBrick.UnlockExtra(itemID - RedBrickOffset);
+                Shop.UnlockExtra(itemID - RedBrickOffset);
                 break;
         }
 
@@ -108,6 +108,7 @@ public class Game
     private static IReverseWrapper<TrueSuperHero> _reverseWrapOnTrueSuperHero = default!;
     private static IReverseWrapper<ChangeSuitWorn> _reverseWrapOnChangeSuitWorn = default!;
     private static IReverseWrapper<ChangeSuitSignal> _reverseWrapOnChangeSuitSignal = default!;
+    private static IReverseWrapper<PurchaseRedBrick> _reverseWrapOnPurchaseRedBrick = default!;
 
     // Modifying the associated assembly of our game to call our functions
     // TODO: Future proof this from game updates by implementing signature scanning
@@ -238,6 +239,17 @@ public class Game
         };
         // Change Suit that the signal is showing in a level
         _asmHooks.Add(hooks.CreateAsmHook(changeSuitSignalHook, (int)(Mod.BaseAddress + 0xF0818), AsmHookBehaviour.ExecuteFirst).Activate());
+
+        string[] purchaseRedBrick =
+        {
+            "use32",
+            "pushfd",
+            "pushad",
+            $"{hooks.Utilities.GetAbsoluteCallMnemonics(OnPurchaseRedBrick, out _reverseWrapOnPurchaseRedBrick)}",
+            "popad",
+            "popfd",
+        };
+        _asmHooks.Add(hooks.CreateAsmHook(purchaseRedBrick, (int)(Mod.BaseAddress + 0x1CEE67), AsmHookBehaviour.ExecuteFirst).Activate());
 
     }
 
@@ -388,6 +400,7 @@ public class Game
             Mod.GameInstance!.isShopOpen = true;
             Mod.PrintToLog("Shop In Hub Opened");
             Mod.LB1_AP!.UpdateBasedOnLocations(0, MaxItemID);
+            Shop.ResetShopPurchaseLocks();
         }
         else if (IsInHub() && ecx == 0x2F) // Open Level Selector
         {
@@ -511,6 +524,23 @@ public class Game
         return eax;
     }
 
+    [Function([FunctionAttribute.Register.eax, FunctionAttribute.Register.edx],
+    FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
+    public delegate void PurchaseRedBrick(uint eax, uint edx);
+    private static unsafe void OnPurchaseRedBrick(uint eax, uint edx)
+    {
+        if (Mod.GameInstance!.isShopOpen)
+        {
+            int itemId = BitOperations.TrailingZeroCount(edx);
+            uint redBrickAddress = (uint)*(byte**)(Mod.BaseAddress + 0x6BE2C0);
+            if ((eax - redBrickAddress) == 0x4)
+            {
+                itemId += 0x20; // For the last 4 red bricks, eax is a different address. This accounts for that
+            }
+            CheckAndReportLocation(itemId + RedBrickOffset);
+        }
+    }
+
     public static void CheckAndReportLocation(int apID)
     {
         if (Mod.LB1_AP!.IsLocationChecked(apID))
@@ -528,7 +558,7 @@ public class Game
         LevelHandler.ResetHostages();
         LevelHandler.ResetTrueSuperHeroes();
         Suits.ResetSuits();
-        RedBrick.ResetRedBricks();
+        Shop.ResetRedBricks();
     }
 
     // public static void CheckWinCon()
