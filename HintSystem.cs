@@ -63,18 +63,25 @@ public class HintSystem
     {
         while (true)
         {
-            // // Several checks we run to determine if something can be printed on screen
+            // Several checks we run to determine if something can be printed on screen
             bool playerControllable = Game.IsPlayerControllable();
             bool notInShop;
             bool notInMenu;
-            // TODO: Add a check for 1) Story name up & 2) YCBOB starting moment when everyone is frozen until the player moves
             lock (Mod.GameInstance!.StateLock)
             {
                 notInShop = Mod.GameInstance!.isShopOpen == false;
                 notInMenu = Mod.GameInstance!.isMenuOpen == false;
             }
 
-            if (playerControllable && notInShop && notInMenu)
+            // Timer for when a story (H1, V1, etc.) name is present on screen
+            float* storyNameTimer = (float*)(Mod.BaseAddress + 0x6CB6AC);
+            bool hasStoryTimerCleared = *storyNameTimer == 0;
+
+            // This byte determines whether enemies can attack you at the beginning of YCBOB
+            byte* YcbobEnemiesAddress = (byte*)(Mod.BaseAddress + 0x6CB68C);
+            bool enemiesCanAttack = *YcbobEnemiesAddress == 0;
+
+            if (playerControllable && notInShop && notInMenu && hasStoryTimerCleared && enemiesCanAttack)
             {
                 // verify if there is no message currently being printed or if the timer is maxed (at 7.5 seconds)
                 if (*HintCodeInterpreterAddress == 0 || *HintTimerAddress >= 7.5f)
@@ -235,4 +242,29 @@ public class HintSystem
     //         *(NewGameTextAddress + i) = OriginalNewGameText[i];
     //     }
     // }
+
+    private static unsafe float* MinikitTimer => (float*)(Mod.BaseAddress + 0x6D10DC);
+
+    public static unsafe void MakeMinikitCountAppear()
+    {
+        if (MinikitTimer == null)
+        {
+            Mod.PrintToLog("Cannot Show Minikit Count, Minikit Timer is null");
+            return;
+        }
+        *MinikitTimer = 1;
+    }
+
+    public static unsafe void MakeMinikitCountDisappear()
+    {
+        if (MinikitTimer == null)
+        {
+            Mod.PrintToLog("Cannot Clear Minikit Count, Minikit Timer is null");
+            return;
+        }
+        if (*MinikitTimer > 0)
+        {
+            *MinikitTimer = 0;
+        }
+    }
 }

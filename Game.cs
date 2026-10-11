@@ -31,6 +31,8 @@ public class Game
 
         // NOP the code that writes to the Hint Interpreter
         Memory.Instance.SafeWrite(Mod.BaseAddress + 0x1D522D, [0x90, 0x90, 0x90, 0x90, 0x90, 0x90]);
+        // NOP the code that writes to the Minikit on screen timer (keeping the pop but removing the write
+        Memory.Instance.SafeWrite(Mod.BaseAddress + 0xDC040, [0xDD, 0xD8, 0x90, 0x90, 0x90, 0x90]);
     }
 
     // Used to check if the game menu is loaded before connecting and trying to set up hooks
@@ -410,7 +412,7 @@ public class Game
         {
             return;
         }
-        Mod.PrintToLog($"ecx for Map Update is: 0x{ecx:X}");
+        Mod.PrintToLog($"ecx for Menu Opened is: 0x{ecx:X}");
         if (IsInHub() && ecx == 0x21) // Open menu
         {
             ResetItems();
@@ -451,6 +453,7 @@ public class Game
             Mod.PrintToLog("Menu in Level Opened");
             Mod.LB1_AP!.UpdateBasedOnItems(SuitOffset, MinikitOffset - 1);
             Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, RedBrickOffset - 1);
+            HintSystem.MakeMinikitCountAppear();
         }
     }
 
@@ -488,6 +491,7 @@ public class Game
                 Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, RedBrickOffset - 1);
                 Mod.LB1_AP!.UpdateBasedOnItems(TrueSuperHeroOffset, MaxItemID);
             }
+            HintSystem.MakeMinikitCountDisappear();
         }
     }
 
