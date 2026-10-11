@@ -147,10 +147,7 @@ public class HintSystem
         }
     }
 
-    /*
-    Helper function to convert a string to ASCII encoded bytes
-    Used primarily for hint system, but also used to restore Return to Leaky Cauldron in The Seven Harrys since the Delum and Bag lesson messes with it to ensure you learn apparition
-    */
+    // Helper function to convert a string to ASCII encoded bytes
     public static void WriteTextToMemory(string newText, uint memoryAddress)
     {
 
