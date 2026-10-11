@@ -32,7 +32,7 @@ public class ArchipelagoHandler
     public static readonly int gameOffset = 400000;
 
     private Thread? _locationsThread;
-    // private Thread? _hintThread;
+    private Thread? _hintThread;
     // private Thread? _queuedItemsThread;
 
     public ArchipelagoHandler(string server, int port, string slot, string password)
@@ -48,7 +48,7 @@ public class ArchipelagoHandler
     private void CreateSession()
     {
         _session = ArchipelagoSessionFactory.CreateSession(Server, Port);
-        // _session.MessageLog.OnMessageReceived += OnMessageReceived;
+        _session.MessageLog.OnMessageReceived += OnMessageReceived;
         _session.Socket.SocketClosed += OnSocketClosed;
         _session.Socket.ErrorReceived += OnSessionErrorReceived;
         // _session.Socket.PacketReceived += PacketReceived;
@@ -275,19 +275,21 @@ public class ArchipelagoHandler
         {
             _locationsThread = new Thread(RunCheckLocationsFromList)
             {
-                IsBackground = true
+                IsBackground = true,
+                Name = "LocationThread"
             };
             _locationsThread.Start();
         }
 
-        // if (_hintThread == null || !_hintThread.IsAlive)
-        // {
-        //     _hintThread = new Thread(HintSystem.HandleMessages)
-        //     {
-        //         IsBackground = true
-        //     };
-        //     _hintThread.Start();
-        // }
+        if (_hintThread == null || !_hintThread.IsAlive)
+        {
+            _hintThread = new Thread(HintSystem.HandleMessages)
+            {
+                IsBackground = true,
+                Name = "HintThread"
+            };
+            _hintThread.Start();
+        }
 
         // if (_queuedItemsThread == null || !_queuedItemsThread.IsAlive)
         // {
@@ -429,7 +431,7 @@ public class ArchipelagoHandler
         }
         if ((item.Flags & ItemFlags.NeverExclude) == ItemFlags.NeverExclude)
         {
-            return 6; // 6 is Dark Blue
+            return 8; // 8 is Dark Blue
         }
         if ((item.Flags & ItemFlags.None) == ItemFlags.None)
         {
@@ -457,7 +459,7 @@ public class ArchipelagoHandler
                     return;
                 }
 
-                // HintSystem.EnqueueMessage(hntmsg, itemFlag);
+                HintSystem.EnqueueMessage(hntmsg, itemFlag);
                 break;
             case ItemSendLogMessage itemMessage:
                 // Currently printing all Item messages in case it breaks something
@@ -471,10 +473,10 @@ public class ArchipelagoHandler
                     return;
                 }
 
-                // HintSystem.EnqueueMessage(itmmsg, itemFlag);
+                HintSystem.EnqueueMessage(itmmsg, itemFlag);
                 break;
             case GoalLogMessage goalLogMessage:
-                // HintSystem.EnqueueMessage(goalLogMessage.ToString(), 3);
+                HintSystem.EnqueueMessage(goalLogMessage.ToString(), 3);
                 break;
             default:
                 /* 
@@ -485,16 +487,11 @@ public class ArchipelagoHandler
                 bool isCheatMessage = message.ToString() != null && message.ToString().Contains("Cheat console");
                 if (isCheatMessage)
                 {
-                    // HintSystem.EnqueueMessage(message.ToString(), 3); // If we get a cheat console message, we want to print it
+                    HintSystem.EnqueueMessage(message.ToString(), 3); // If we get a cheat console message, we want to print it
                 }
                 break;
         }
     }
-
-
-
-
-
 
     public void UpdateTags(string[] tags)
     {

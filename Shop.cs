@@ -17,7 +17,12 @@ public class Shop
         if (ID < 21)
         {
             UnlockRedBrick(byteOffset, bitOffset);
-            if (Mod.GameInstance!.isShopOpen)
+            bool isInShop;
+            lock (Mod.GameInstance!.StateLock)
+            {
+                isInShop = Mod.GameInstance!.isShopOpen;
+            }
+            if (isInShop)
             {
                 LockPurchase(ID, ExtraOffset, 1);
             }
@@ -26,7 +31,12 @@ public class Shop
         {
             UnlockRedBrick(byteOffset, bitOffset);
             ActivateSuitUpgrade(ID);
-            if (Mod.GameInstance!.isShopOpen)
+            bool isInShop;
+            lock (Mod.GameInstance!.StateLock)
+            {
+                isInShop = Mod.GameInstance!.isShopOpen;
+            }
+            if (isInShop)
             {
                 LockPurchase(ID, SuitUpgradeOffset, 0x15);
             }

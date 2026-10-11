@@ -12,6 +12,8 @@ namespace LB1_AP_Mod;
 public class Game
 {
     private ushort MapID = 0;
+    // This lock is used for isInShop, isInMenu because of the Hint System
+    public readonly object StateLock = new();
     public bool isMenuOpen = false;
     public bool isShopOpen = false;
     // After Connecting, this function reads initial game variables and NOPs code that we don't want running
@@ -26,6 +28,9 @@ public class Game
         Mod.GameInstance!.MapID = *mapPointer;
         Mod.PrintToLog($"Initial Map Address is: {*mapPointer}");
         Mod.LB1_AP!.SendMapID(*mapPointer);
+
+        // NOP the code that writes to the Hint Interpreter
+        Memory.Instance.SafeWrite(Mod.BaseAddress + 0x1D522D, [0x90, 0x90, 0x90, 0x90, 0x90, 0x90]);
     }
 
     // Used to check if the game menu is loaded before connecting and trying to set up hooks
@@ -42,12 +47,22 @@ public class Game
         }
     }
 
+    public static unsafe bool IsPlayerControllable()
+    {
+        byte* playerFlagBase = *(byte**)(Mod.BaseAddress + 0x6B364C);
+        if (playerFlagBase == null)
+        {
+            return false;
+        }
+        return *(playerFlagBase + 0x258) == 1;
+    }
+
     // Helper Function to check if menu is loaded or player is controllable
     public static unsafe bool AreGameFilesLoaded()
     {
         try
         {
-            if (Mod.GameInstance!.MapID > 0)
+            if (Mod.GameInstance!.MapID > 0 || IsPlayerControllable())
                 return true;
             uint* basePtr = (uint*)(Mod.BaseAddress + 0x6B364C);
             if (basePtr == null || *basePtr < Mod.BaseAddress)
@@ -108,6 +123,7 @@ public class Game
     private static IReverseWrapper<ChangeSuitWorn> _reverseWrapOnChangeSuitWorn = default!;
     private static IReverseWrapper<ChangeSuitSignal> _reverseWrapOnChangeSuitSignal = default!;
     private static IReverseWrapper<PurchaseRedBrick> _reverseWrapOnPurchaseRedBrick = default!;
+    private static IReverseWrapper<HandleInterruptedMessage> _reverseWrapOnHandleInterruptedMessage = default!;
 
     // Modifying the associated assembly of our game to call our functions
     // TODO: Future proof this from game updates by implementing signature scanning
@@ -250,6 +266,16 @@ public class Game
         };
         _asmHooks.Add(hooks.CreateAsmHook(purchaseRedBrick, (int)(Mod.BaseAddress + 0x1CEE67), AsmHookBehaviour.ExecuteFirst).Activate());
 
+        string[] handleInterruptedMessageHook =
+        {
+            "use32",
+            "pushfd",
+            "pushad",
+            $"{hooks.Utilities.GetAbsoluteCallMnemonics(OnHandleInterruptedMessage, out _reverseWrapOnHandleInterruptedMessage)}",
+            "popad",
+            "popfd",
+        };
+        _asmHooks.Add(hooks.CreateAsmHook(handleInterruptedMessageHook, (int)(Mod.BaseAddress + 0x1D4E0E), AsmHookBehaviour.ExecuteFirst).Activate());
     }
 
     [Function([FunctionAttribute.Register.eax, FunctionAttribute.Register.edx],
@@ -332,7 +358,6 @@ public class Game
         }
     }
 
-
     private static bool IsInHub()
     {
         return HubMapIDs.Contains(Mod.GameInstance!.MapID);
@@ -389,14 +414,20 @@ public class Game
         if (IsInHub() && ecx == 0x21) // Open menu
         {
             ResetItems();
-            Mod.GameInstance!.isMenuOpen = true;
+            lock (Mod.GameInstance!.StateLock)
+            {
+                Mod.GameInstance!.isMenuOpen = true;
+            }
             Mod.PrintToLog("Menu In Hub Opened");
             Mod.LB1_AP!.UpdateBasedOnItems(0, MaxItemID);
         }
         else if (IsInHub() && ecx == 0x2C) // Open Shop
         {
             ResetItems();
-            Mod.GameInstance!.isShopOpen = true;
+            lock (Mod.GameInstance!.StateLock)
+            {
+                Mod.GameInstance!.isShopOpen = true;
+            }
             Mod.PrintToLog("Shop In Hub Opened");
             Mod.LB1_AP!.UpdateBasedOnLocations(0, MaxItemID);
             Shop.ResetShopPurchaseLocks();
@@ -413,7 +444,10 @@ public class Game
         else if (LevelHandler.CheckStatusMap(Mod.GameInstance!.MapID) == -1)
         {
             ResetItems();
-            Mod.GameInstance!.isMenuOpen = true;
+            lock (Mod.GameInstance!.StateLock)
+            {
+                Mod.GameInstance!.isMenuOpen = true;
+            }
             Mod.PrintToLog("Menu in Level Opened");
             Mod.LB1_AP!.UpdateBasedOnItems(SuitOffset, MinikitOffset - 1);
             Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, RedBrickOffset - 1);
@@ -424,10 +458,20 @@ public class Game
     public delegate void CloseMenu();
     private static void OnCloseMenu()
     {
-        if (Mod.GameInstance!.isMenuOpen || Mod.GameInstance!.isShopOpen)
+        bool isInShop;
+        bool isInMenu;
+        lock (Mod.GameInstance!.StateLock)
         {
-            Mod.GameInstance!.isMenuOpen = false;
-            Mod.GameInstance!.isShopOpen = false;
+            isInShop = Mod.GameInstance!.isShopOpen;
+            isInMenu = Mod.GameInstance!.isMenuOpen;
+        }
+        if (isInMenu || isInShop)
+        {
+            lock (Mod.GameInstance!.StateLock)
+            {
+                Mod.GameInstance!.isMenuOpen = false;
+                Mod.GameInstance!.isShopOpen = false;
+            }
             ResetItems();
             if (IsInHub())
             {
@@ -528,7 +572,12 @@ public class Game
     public delegate void PurchaseRedBrick(uint eax, uint edx);
     private static unsafe void OnPurchaseRedBrick(uint eax, uint edx)
     {
-        if (Mod.GameInstance!.isShopOpen)
+        bool isInShop;
+        lock (Mod.GameInstance!.StateLock)
+        {
+            isInShop = Mod.GameInstance!.isShopOpen;
+        }
+        if (isInShop)
         {
             int itemId = BitOperations.TrailingZeroCount(edx);
             uint redBrickAddress = (uint)*(byte**)(Mod.BaseAddress + 0x6BE2C0);
@@ -539,6 +588,14 @@ public class Game
             CheckAndReportLocation(itemId + RedBrickOffset);
         }
     }
+
+    [Function(CallingConventions.Fastcall)]
+    private delegate void HandleInterruptedMessage();
+    private static void OnHandleInterruptedMessage()
+    {
+        HintSystem.HandleInterruptedMessage();
+    }
+
 
     public static void CheckAndReportLocation(int apID)
     {
