@@ -49,8 +49,7 @@ public class Game
         {
             if (Mod.GameInstance!.MapID > 0)
                 return true;
-            // TODO: Use a better address for this. It loads a little early right now which could cause some issues
-            uint* basePtr = (uint*)(Mod.BaseAddress + 0x6957F8);
+            uint* basePtr = (uint*)(Mod.BaseAddress + 0x6B364C);
             if (basePtr == null || *basePtr < Mod.BaseAddress)
                 return false;
 
@@ -386,7 +385,7 @@ public class Game
         {
             return;
         }
-        Mod.PrintToLog($"ecx is: 0x{ecx:X}");
+        Mod.PrintToLog($"ecx for Map Update is: 0x{ecx:X}");
         if (IsInHub() && ecx == 0x21) // Open menu
         {
             ResetItems();
