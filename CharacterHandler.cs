@@ -1,72 +1,11 @@
-﻿using System.Numerics;
-
-namespace LB1_AP_Mod;
+﻿namespace LB1_AP_Mod;
 
 public class CharacterHandler
 {
-    public static readonly uint characterCount = 48 + 12 + 10 + 10 + 1;
-    public static readonly uint characterShopCount = 53;
-
-	private static unsafe byte* characterBaseAddress => *(byte**)(Mod.BaseAddress + 0x6CB30);
-    private static readonly byte unlockOffset = 0xE4;
-
-    public unsafe byte*[] _characterBytes = new byte*[characterCount];
-    public bool[] token = new bool[characterCount];
-    public bool[] purchased = new bool[characterCount];
-    public bool[] unlocked = new bool[characterCount];
-
-    public static IntPtr vanillaShopCharacter(IntPtr i)
+    private static readonly Dictionary<int, int> CharacterOffsets = new()
     {
-        bool isVanilla = true;
-        if (!isVanilla) return i;
-
-        if (i > 1 && i < 15)
-        {
-            return i-2;
-        } 
-        else if (i == 22)
-        {
-            return 13;
-        }
-        else if (i == 24)
-        {
-            return 14;
-        }
-        else if (i == 29)
-        {
-            return 15;
-        }
-        else if (i > 30 && i < 46)
-        {
-            return 16 + (i-31);
-        }
-        else if (i > 49 && i < 60)
-        {
-            return 31 + (i-49);
-        }
-        else if (i > 61 && i < 65)
-        {
-            return 41 + (i-61);
-        }
-        else if (i > 66 && i < 70)
-        {
-            return 45 + (i-61);
-        }
-        else if (i > 71 && i < 75)
-        {
-            return 47 + (i-71);
-        }
-        else
-        {
-            return -1;
-        }
-    }
-
-
-	public static readonly Dictionary<int, int> characterMap = new()
-	{
-        {0, 0x00}, // Batman
-        {1, 0x01}, // Robin
+        // {0, 0x00}, // Batman
+        // {1, 0x01}, // Robin
         {2, 0x18}, // Bruce Wayne
         {3, 0x13}, // Alfred
         {4, 0x02}, // Batgirl
@@ -78,139 +17,223 @@ public class CharacterHandler
         {10, 0x30}, // Security Guard
         {11, 0x42}, // Swat
         {12, 0x2B}, // Scientist
-        {12, 0x2D}, // Sailor
-        {13, 0x43}, // Police Marksman
-        {14, 0x0F}, // Clayface
-        {15, 0x16}, // Mr. Freeze
-        {16, 0x15}, // Poison Ivy
-        {17, 0x07}, // Two-Face
-        {18, 0x0D}, // The Riddler
-        {19, 0x19}, // Bane
-        {20, 0x04}, // Catwoman
-        {21, 0x05}, // Catwoman (Classic)
-        {22, 0x0E}, // Killer Croc
-        {23, 0x10}, // Man-Bat
-        {24, 0x0C}, // The Penguin
-        {25, 0x0B}, // Harley Quinn
-        {26, 0x14}, // The Scarecrow
-        {27, 0x1A}, // Killer Moth
-        {28, 0x21}, // Mad Hatter
-        {29, 0x09}, // The Joker
-        {30, 0x0A}, // The Joker (Tropical)
-        {31, 0x44}, // Poison Ivy Goon
-        {32, 0x46}, // Zoo Sweeper
-        {33, 0x3B}, // Freeze Girl
-        {34, 0x3D}, // Yeti
-        {35, 0x39}, // Riddler Goon
-        {36, 0x3A}, // Riddler Henchman
-        {37, 0x33}, // Penguin Goon
-        {38, 0x34}, // Penguin Henchman
-        {39, 0x29}, // Penguin Minion
-        {40, 0x36}, // Joker Goon
-        {41, 0x37}, // Joker Henchman
-        {42, 0x38}, // Clown Goon
-        {43, 0x08}, // Hush
-        {44, 0x12}, // Rā's al Ghūl
-        {45, 0x49}, // Hero 1
-        {46, 0x4A}, // Hero 2
+        {13, 0x2D}, // Sailor
+        {14, 0x43}, // Police Marksman
+        {15, 0x0F}, // Clayface
+        {16, 0x16}, // Mr. Freeze
+        {17, 0x15}, // Poison Ivy
+        {18, 0x07}, // Two-Face
+        {19, 0x0D}, // The Riddler
+        {20, 0x19}, // Bane
+        {21, 0x04}, // Catwoman
+        {22, 0x05}, // Catwoman (Classic)
+        {23, 0x0E}, // Killer Croc
+        {24, 0x10}, // Man-Bat
+        {25, 0x0C}, // The Penguin
+        {26, 0x0B}, // Harley Quinn
+        {27, 0x14}, // The Scarecrow
+        {28, 0x1A}, // Killer Moth
+        {29, 0x21}, // Mad Hatter
+        {30, 0x09}, // The Joker
+        {31, 0x0A}, // The Joker (Tropical)
+        {32, 0x44}, // Poison Ivy Goon
+        {33, 0x46}, // Zoo Sweeper
+        {34, 0x3B}, // Freeze Girl
+        {35, 0x3D}, // Yeti
+        {36, 0x39}, // Riddler Goon
+        {37, 0x3A}, // Riddler Henchman
+        {38, 0x33}, // Penguin Goon
+        {39, 0x34}, // Penguin Henchman
+        {40, 0x29}, // Penguin Minion
+        {41, 0x36}, // Joker Goon
+        {42, 0x37}, // Joker Henchman
+        {43, 0x38}, // Clown Goon
+        {44, 0x08}, // Hush
+        {45, 0x12}, // Rā's al Ghūl
+        // {46, 0x49}, // Hero 1
+        // {47, 0x4A}, // Hero 2
 
         // landcraft
 
-        {46, 0x81}, // batmobile
-        {47, 0x82}, // batcycle
-        {48, 0x119}, // police car
-        {49, 0x11A}, // police bike
-
-        {50, 0x11F}, // police van
-        {51, 0x121}, // bat-tank
-        {52, 0x110}, // catwoman's motorcycle
-        {53, 0xC6}, // two-face's armoured truck
-    
-        {54, 0xD2}, // mr. freeze's kart
-        {55, 0xCD}, // harley quinn's hammer truck
-        {56, 0x116}, // the joker's van
-        {57, 0x11B}, // garbage truck
+        {48, 0x81}, // batmobile
+        {49, 0x82}, // batcycle
+        {50, 0x119}, // police car
+        {51, 0x11A}, // police bike
+        {52, 0x11F}, // police van
+        {53, 0x121}, // bat-tank
+        {54, 0x110}, // catwoman's motorcycle
+        {55, 0xC6}, // two-face's armoured truck
+        {56, 0xD2}, // mr. freeze's kart
+        {57, 0xCD}, // harley quinn's hammer truck
+        {58, 0x116}, // the joker's van
+        {59, 0x11B}, // garbage truck
 
         // watercraft
 
-        {58, 0x84}, // Batboat
-        {59, 0xBD}, // Robin's Watercraft
-        {60, 0x10D}, // Robin's Submarine
-        {61, 0xD1}, // Police Watercraft
-        {62, 0x9E}, // Police Boat
-
-        {63, 0xCE}, // Penguin's Submarine
-        {64, 0xBA}, // Killer Croc's Swamp Rider
-        {65, 0xC0}, // Penguin Goon Submarine
-        {66, 0x11D}, // Mr. Freeze's Iceberg
-        {67, 0x11E}, // Mad Hatter's Steamboat
+        {60, 0x84}, // Batboat
+        {61, 0xBD}, // Robin's Watercraft
+        {62, 0x10D}, // Robin's Submarine
+        {63, 0xD1}, // Police Watercraft
+        {64, 0x9E}, // Police Boat
+        {65, 0xCE}, // Penguin's Submarine
+        {66, 0xBA}, // Killer Croc's Swamp Rider
+        {67, 0xC0}, // Penguin Goon Submarine
+        {68, 0x11D}, // Mr. Freeze's Iceberg
+        {69, 0x11E}, // Mad Hatter's Steamboat
 
         // aircraft
 
-        {68, 0x83}, // Batwing
-        {69, 0xC4}, // Batcopter
-        {70, 0x101}, // Harbour Helicopter
-        {71, 0x112}, // Police Helicopter
-        {72, 0x10F}, // Bruce Wayne's Private Jet
+        {70, 0x83}, // Batwing
+        {71, 0xC4}, // Batcopter
+        {72, 0x101}, // Harbour Helicopter
+        {73, 0x112}, // Police Helicopter
+        {74, 0x10F}, // Bruce Wayne's Private Jet
 
-        {73, 0xC1}, // The Joker's Helicopter
-        {74, 0xD0}, // The Scarecrow's Biplane
-        {75, 0x118}, // Goon Helicopter
-        {76, 0x11C}, // Riddler's jet
-        {77, 0x122}, // Mad Hatter's Glider
-
-        // special
-        {78, 0x03},
+        {75, 0xC1}, // The Joker's Helicopter
+        {76, 0xD0}, // The Scarecrow's Biplane
+        {77, 0x118}, // Goon Helicopter
+        {78, 0x11C}, // Riddler's jet
+        {79, 0x122}, // Mad Hatter's Glider
     };
 
+    private static unsafe byte* CharacterBaseAddress => *(byte**)(Mod.BaseAddress + 0x6CB830);
 
     // Returns the offset when searching the ID
-    public static int GetCharacterByteOffset(int id)
+    private static int GetCharacterByteOffset(int id)
     {
-        return characterMap.TryGetValue(id, out var val) ? val : -1;
+        return CharacterOffsets.TryGetValue(id, out var val) ? val : -1;
     }
 
-    /*
-    Helper function that does a reverse lookup of Character Purchases to the Dictionary above and returns the Archi ID.
-    It takes the address that is being written to (gotten from our hook).
-    */
-    public static unsafe int GetPurchaseCharacterID(IntPtr address, int offset)
+    // Returns the ID when searching the offset
+    public static int GetCharacterArchiID(int offset)
     {
-        long byteIndex = address + offset + 0x74 - (IntPtr)(characterBaseAddress + unlockOffset);
-        if (byteIndex < 0)
-        {
-            return -1;
-        }
-
-        int value = (int)byteIndex;
-        var kvp = characterMap.FirstOrDefault(k => k.Value == value);
+        var kvp = CharacterOffsets.FirstOrDefault(k => k.Value == offset);
         return kvp.Equals(default(KeyValuePair<int, int>)) ? -1 : kvp.Key;
     }
 
-    public unsafe void PurchaseLocks(IntPtr i)
+    // Helper function to unlock a playable character based on archi ID, takes archi ID as a parameter
+    public static unsafe void UnlockCharacter(int id)
     {
-        Mod.PrintToLog($"hegesdgf{i}");
-        if (vanillaShopCharacter(i) == -1) return;
-        // PurchaseLocks(i, lb1AP_location[i]);
-    }
+        int byteOffset = GetCharacterByteOffset(id);
 
-    public unsafe void PurchaseLocks(IntPtr i, bool locked)
-    {
-        i = vanillaShopCharacter(i);
-        if (i == -1) return;
-        Mod.PrintToLog($"wollup{i} lock {locked}");
-        uint addr = Mod.BaseAddress + 0x560894 - 0x1000;
-        Mod.PrintToLog("d");
-        addr = *(uint*)(*(uint*)addr + 0x5380);
-        if (addr == 0)
+        byte* ptr = CharacterBaseAddress + byteOffset;
+        if (ptr == null || CharacterBaseAddress == null)
         {
-            Mod.PrintToLog("ERR: purchase locks being called outside of shoproom");
+            Mod.PrintToLog($"Can't Unlock Character, null pointer at 0x{(uint)ptr:X}");
+            Mod.PrintToLog($"Character Base address is: 0x{(uint)CharacterBaseAddress:X}");
+            Mod.PrintToLog($"byteOffset is: {byteOffset}");
             return;
         }
-        Mod.PrintToLog($"c");
-        addr = *(uint*)(addr + 0xC7C);
-        Mod.PrintToLog($"b");
-        addr += (uint)((i * 0x74) + 0x63);
-        *(byte*)addr = locked ? (byte)1 : (byte)0;
+        *ptr = 1;
+    }
+
+    // Resets all playable characters to locked
+    public static unsafe void ResetUnlockedCharacters()
+    {
+        foreach (var kvp in CharacterOffsets)
+        {
+            int byteOffset = kvp.Value;
+
+            byte* ptr = CharacterBaseAddress + byteOffset;
+            if (ptr == null || CharacterBaseAddress == null)
+            {
+                Mod.PrintToLog($"Can't Unlock Character, null pointer at 0x{(uint)ptr:X}");
+                Mod.PrintToLog($"Character Base address is: 0x{(uint)CharacterBaseAddress:X}");
+                Mod.PrintToLog($"byteOffset is: {byteOffset}");
+
+                return;
+            }
+            *ptr = 0;
+        }
+    }
+
+    // This Dictionary contains a list of the level ID & the Archi IDs of the 
+    // vanilla character unlocks following archi logic
+    private static readonly Dictionary<int, List<int>> VanillaUnlocks = new()
+    {
+        [2] = [48, 49],
+        [6] = [60, 61],
+        [12] = [70, 71],
+        [15] = [15, 19],
+        [16] = [16, 19],
+        [17] = [17, 19],
+        [18] = [18, 19],
+        [19] = [18, 19],
+        [20] = [20, 25],
+        [21] = [21, 25],
+        [22] = [25, 65, 66],
+        [23] = [23, 25],
+        [24] = [21, 25],
+        [25] = [26, 30],
+        [26] = [30, 75, 76],
+        [27] = [27, 30],
+        [28] = [28, 30],
+        [29] = [26, 30],
+    };
+
+    public static void SendVanillaCharacters(int levelBeaten)
+    {
+        if (VanillaUnlocks.TryGetValue(levelBeaten, out var unlocks))
+        {
+            foreach (int id in unlocks)
+            {
+                Game.CheckAndReportLocation(id);
+            }
+        }
+    }
+    // This Dictionary contains a list of the level ID & the Archi IDs of the 
+    // special character unlocks (i.e. bruce wayne/Nightwing) so we can take into
+    // account the Simplified Unlock Settings
+    private static readonly Dictionary<int, List<int>> SpecialUnlocks = new()
+    {
+        [4] = [2, 3, 4, 5, 7, 9, 10],
+        [9] = [2, 3, 4, 5, 7, 9, 10],
+        [14] = [2, 3, 4, 5, 7, 9, 10],
+    };
+
+    private const int BatTankOffset = 0x121;
+    private const int BatTankID = 53;
+    public static unsafe void HandleSpecialCharacters()
+    {
+        bool isAllHeroComplete = true;
+        // Handling "Any Hero Story" Characters
+        foreach (var (levelID, characterIDs) in SpecialUnlocks)
+        {
+            if (Mod.LB1_AP!.IsLocationChecked(levelID + Game.LevelOffset))
+            {
+                foreach (int characterID in characterIDs)
+                {
+                    int characterByteOffset = GetCharacterByteOffset(characterID);
+                    byte* ptr = CharacterBaseAddress + characterByteOffset;
+                    if (Mod.LB1_AP!.IsLocationChecked(characterID))
+                    {
+                        *ptr = 3;
+                    }
+                    else
+                    {
+                        *ptr = 2;
+                    }
+                }
+            }
+            else
+            {
+                isAllHeroComplete = false;
+            }
+        }
+        // Handle Bat Tank
+        if (isAllHeroComplete)
+        {
+            byte* ptr = CharacterBaseAddress + BatTankOffset;
+            if (Mod.LB1_AP!.IsLocationChecked(BatTankID))
+            {
+                *ptr = 3;
+            }
+            else
+            {
+                *ptr = 2;
+            }
+        }
+
+        // TODO: Handle Hush/Ras
     }
 }

@@ -14,32 +14,30 @@ public class Shop
         int byteOffset = ID / 8;
         int bitOffset = ID % 8;
 
-        if (ID < 21)
+        if (ID > 35)
         {
-            UnlockRedBrick(byteOffset, bitOffset);
-            bool isInShop;
-            lock (Mod.GameInstance!.StateLock)
-            {
-                isInShop = Mod.GameInstance!.isShopOpen;
-            }
-            if (isInShop)
-            {
-                LockPurchase(ID, ExtraOffset, 1);
-            }
+            return;
         }
-        else if (ID <= 35)
+
+        UnlockRedBrick(byteOffset, bitOffset);
+        bool isSuitUpgrade = ID >= 21;
+        if (isSuitUpgrade)
         {
-            UnlockRedBrick(byteOffset, bitOffset);
             ActivateSuitUpgrade(ID);
-            bool isInShop;
-            lock (Mod.GameInstance!.StateLock)
-            {
-                isInShop = Mod.GameInstance!.isShopOpen;
-            }
-            if (isInShop)
-            {
-                LockPurchase(ID, SuitUpgradeOffset, 0x15);
-            }
+        }
+
+        bool isInShop;
+        lock (Mod.GameInstance!.StateLock)
+        {
+            isInShop = Mod.GameInstance!.isShopOpen;
+        }
+
+        if (isInShop)
+        {
+            LockPurchase(
+                ID,
+                isSuitUpgrade ? SuitUpgradeOffset : ExtraOffset,
+                isSuitUpgrade ? 0x15 : 1);
         }
     }
 
@@ -82,8 +80,12 @@ public class Shop
             *(SuitUpgradesActive + (i * SuitOffset)) &= unchecked((byte)~(1 << 0));
         }
     }
-
+    private static readonly int[] shopCharacters =
+    [
+        2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 22, 24, 29, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 62, 63, 64, 67, 68, 69, 72, 73, 74, 77, 78, 79
+    ];
     private const int ExtraOffset = 0xC74;
+    private const int CharacterOffset = 0xC7C;
     private const int SuitUpgradeOffset = 0xC8C;
     private const int PurchaseLockOffset = 0x63;
     private const int PurchaseLockStride = 0x74;
@@ -95,6 +97,11 @@ public class Shop
     It makes it so you can't hit A on the character even if it shows as avaliable forpurchase.
     This Function resets all the shop items so the associated array in memory matches the Archi Location state.
     */
+    private static int CheckShopCharacter(int ID)
+    {
+        return Array.IndexOf(shopCharacters, ID);
+    }
+
     public static unsafe void ResetShopPurchaseLocks()
     {
         byte* shopLockBase = ShopLockBase;
@@ -106,6 +113,20 @@ public class Shop
 
         ResetPurchaseLocks(shopLockBase, ExtraOffset, 1, 0x14);
         ResetPurchaseLocks(shopLockBase, SuitUpgradeOffset, 0x15, 0xF);
+
+        byte* itemPointer = *(byte**)shopLockBase + CharacterOffset;
+
+        for (int i = 2; i < 80; i++)
+        {
+            int shopID = CheckShopCharacter(i);
+            if (shopID != -1)
+            {
+                bool isLocationChecked = Mod.LB1_AP!.IsLocationChecked(i);
+
+                byte* lockPointer = GetPurchaseLockPointer(itemPointer, shopID);
+                *lockPointer = isLocationChecked ? (byte)1 : (byte)0;
+            }
+        }
     }
 
     private static unsafe void ResetPurchaseLocks(
