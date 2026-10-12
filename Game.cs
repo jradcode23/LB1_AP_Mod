@@ -383,6 +383,7 @@ public class Game
         {
             CheckAndReportLocation(levelCompletedID + LevelOffset);
             CharacterHandler.SendVanillaCharacters(levelCompletedID);
+            CheckWinCon();
         }
         ResetItems();
         Mod.LB1_AP!.SendMapID(Mod.GameInstance!.MapID);
@@ -632,24 +633,42 @@ public class Game
         Suits.ResetSuits();
     }
 
-    // public static void CheckWinCon()
-    // {
-    // Levels Beaten
-    //     if (Mod.LB1_AP!.SlotDataInstance!.EndGoal == 2)
-    //     {
-    //         int levelsCompleted = Mod.LB1_AP!.CountLocationsCheckedInRange(450, 473);
-    //         int requiredLevels = Mod.LB1_AP!.SlotDataInstance!.NumberOfRequiredLevels;
-    //         if (requiredLevels == -1)
-    //         {
-    //             Mod.PrintToLog("Can't Determine if the game is completed, Level slot data not available.");
-    //             return;
-    //         }
-    //         Mod.PrintToLog($"Player Has Completed {levelsCompleted} Levels");
-    //         if (levelsCompleted >= requiredLevels)
-    //         {
-    //             Mod.LB1_AP!.Release();
-    //         }
-    //         return;
-    //     }
-    // }
+    public static void CheckWinCon()
+    {
+        // Minikits
+        if (Mod.LB1_AP!.SlotDataInstance!.EndGoal == 0)
+        {
+            int minikitCount = MinikitHandler.GetMinikitsReceivedCount();
+            int minikitsToWin = Mod.LB1_AP!.SlotDataInstance!.MinikitsToWin;
+            if (minikitsToWin == -1)
+            {
+                Mod.PrintToLog("Can't determine if the game is completed, minikits to win slot data not available");
+                return;
+            }
+            Mod.PrintToLog($"Minikit Count: {minikitCount}. Minikits To Win: {minikitsToWin}");
+            if (minikitCount >= minikitsToWin)
+            {
+                Mod.LB1_AP!.Release();
+            }
+            return;
+        }
+
+        // Levels Beaten
+        if (Mod.LB1_AP!.SlotDataInstance!.EndGoal == 1)
+        {
+            int levelsCompleted = Mod.LB1_AP!.CountLocationsCheckedInRange(LevelOffset, TrueSuperHeroOffset - 1);
+            int requiredLevels = Mod.LB1_AP!.SlotDataInstance!.LevelsToWin;
+            if (requiredLevels == -1)
+            {
+                Mod.PrintToLog("Can't Determine if the game is completed, Level slot data not available.");
+                return;
+            }
+            Mod.PrintToLog($"Level Completed Count: {levelsCompleted}. Required Number of Levels To Win: {requiredLevels}");
+            if (levelsCompleted >= requiredLevels)
+            {
+                Mod.LB1_AP!.Release();
+            }
+            return;
+        }
+    }
 }
