@@ -380,7 +380,7 @@ public class ArchipelagoHandler
     }
 
     // Helper Function to count how many items inbetween a certain archi ID range have been received
-    public int CountItemsCheckedInRange(Int64 start, Int64 end)
+    public int CountItemsReceivedInRange(Int64 start, Int64 end)
     {
         lock (_itemsLock)
         {

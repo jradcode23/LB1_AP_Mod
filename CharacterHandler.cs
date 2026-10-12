@@ -193,47 +193,65 @@ public class CharacterHandler
 
     private const int BatTankOffset = 0x121;
     private const int BatTankID = 53;
+    private const int HushOffset = 0x8;
+    private const int HushID = 44;
+    private const int RasOffset = 0x12;
+    private const int RasID = 45;
+
+    private static unsafe void SetSpecialCharacterState(byte* characterBase, int byteOffset, int locationID)
+    {
+        if (byteOffset < 0)
+        {
+            Mod.PrintToLog($"Invalid character byte offset: {byteOffset}");
+            return;
+        }
+
+        byte* characterPointer = characterBase + byteOffset;
+        *characterPointer = Mod.LB1_AP!.IsLocationChecked(locationID) ? (byte)3 : (byte)2;
+    }
+
     public static unsafe void HandleSpecialCharacters()
     {
+        byte* characterBase = CharacterBaseAddress;
+        if (characterBase == null)
+        {
+            Mod.PrintToLog("Can't update special characters, character base address is null.");
+            return;
+        }
+
         bool isAllHeroComplete = true;
-        // Handling "Any Hero Story" Characters
         foreach (var (levelID, characterIDs) in SpecialUnlocks)
         {
-            if (Mod.LB1_AP!.IsLocationChecked(levelID + Game.LevelOffset))
-            {
-                foreach (int characterID in characterIDs)
-                {
-                    int characterByteOffset = GetCharacterByteOffset(characterID);
-                    byte* ptr = CharacterBaseAddress + characterByteOffset;
-                    if (Mod.LB1_AP!.IsLocationChecked(characterID))
-                    {
-                        *ptr = 3;
-                    }
-                    else
-                    {
-                        *ptr = 2;
-                    }
-                }
-            }
-            else
+            if (!Mod.LB1_AP!.IsLocationChecked(levelID + Game.LevelOffset))
             {
                 isAllHeroComplete = false;
+                continue;
             }
-        }
-        // Handle Bat Tank
-        if (isAllHeroComplete)
-        {
-            byte* ptr = CharacterBaseAddress + BatTankOffset;
-            if (Mod.LB1_AP!.IsLocationChecked(BatTankID))
+
+            foreach (int characterID in characterIDs)
             {
-                *ptr = 3;
-            }
-            else
-            {
-                *ptr = 2;
+                SetSpecialCharacterState(characterBase, GetCharacterByteOffset(characterID), characterID);
             }
         }
 
-        // TODO: Handle Hush/Ras
+        if (isAllHeroComplete)
+        {
+            SetSpecialCharacterState(characterBase, BatTankOffset, BatTankID);
+        }
+
+        if (Mod.LB1_AP!.SlotDataInstance!.ShuffleHushAndRas == 1)
+        {
+            int hostageCount = Mod.LB1_AP!.CountItemsReceivedInRange(400, 424); // Count All hostage items
+            if (hostageCount >= Mod.LB1_AP!.SlotDataInstance!.HushUnlockCondition)
+            {
+                SetSpecialCharacterState(characterBase, HushOffset, HushID);
+            }
+
+            int minikitCount = MinikitHandler.GetMinikitsReceivedCount();
+            if (minikitCount >= Mod.LB1_AP!.SlotDataInstance!.RasUnlockCondition)
+            {
+                SetSpecialCharacterState(characterBase, RasOffset, RasID);
+            }
+        }
     }
 }
