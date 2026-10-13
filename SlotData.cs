@@ -6,6 +6,7 @@ public class SlotData(Dictionary<string, object> slotData)
     public int EndGoal => GetIntSlotValue("EndGoal");
     public int MinikitSanity => GetIntSlotValue("MinikitSanity");
     public int MinikitsToWin => GetIntSlotValue("MinikitsToWin");
+    public int MinikitGrouping => GetIntSlotValue("MinikitGrouping");
     public int LevelsToWin => GetIntSlotValue("LevelsToWin");
     public int CheaperShops => GetIntSlotValue("cheaper_shops");
     public int ShuffleHushAndRas => GetIntSlotValue("ShuffleHushAndRas");
@@ -35,6 +36,7 @@ public class SlotData(Dictionary<string, object> slotData)
         Mod.PrintToLog($"EndGoal: {EndGoal}");
         Mod.PrintToLog($"MinikitSanity: {MinikitSanity}");
         Mod.PrintToLog($"MinikitsToWin: {MinikitsToWin}");
+        Mod.PrintToLog($"MinikitGrouping: {MinikitGrouping}");
         Mod.PrintToLog($"LevelsToWin: {LevelsToWin}");
         Mod.PrintToLog($"cheaper_shops: {CheaperShops}");
         Mod.PrintToLog($"ShuffleHushAndRas: {ShuffleHushAndRas}");
@@ -43,7 +45,7 @@ public class SlotData(Dictionary<string, object> slotData)
         Mod.PrintToLog($"SimpleEpisodeCharacters: {SimpleEpisodeCharacters}");
 
 
-        if (EndGoal == -1 || MinikitSanity == -1 || MinikitsToWin == -1 || LevelsToWin == -1 || CheaperShops == -1 || ShuffleHushAndRas == -1 || HushUnlockCondition == -1 || RasUnlockCondition == -1 || SimpleEpisodeCharacters == -1)
+        if (EndGoal == -1 || MinikitSanity == -1 || MinikitsToWin == -1 || MinikitGrouping == -1 || LevelsToWin == -1 || CheaperShops == -1 || ShuffleHushAndRas == -1 || HushUnlockCondition == -1 || RasUnlockCondition == -1 || SimpleEpisodeCharacters == -1)
         {
             Mod.PrintToLog("One or more values not found or invalid. Please report to the devs.");
         }

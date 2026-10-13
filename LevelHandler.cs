@@ -56,8 +56,8 @@ public class LevelHandler
             return;
         }
         int offset = LevelMemoryOffsets[itemID];
-        byte* storyMode = LevelBaseAddress + offset * OffsetMultiplier + StoryOffset;
-        byte* freeplayMode = LevelBaseAddress + offset * OffsetMultiplier + FreeplayOffset;
+        byte* storyMode = LevelBaseAddress + (offset * OffsetMultiplier) + StoryOffset;
+        byte* freeplayMode = LevelBaseAddress + (offset * OffsetMultiplier) + FreeplayOffset;
         *storyMode = 1;
         *freeplayMode = 1;
     }
@@ -72,8 +72,8 @@ public class LevelHandler
                 Mod.PrintToLog("Level Base Address is null. Please report to a dev. Aborting.");
                 return;
             }
-            byte* storyMode = LevelBaseAddress + offset * OffsetMultiplier + StoryOffset;
-            byte* freeplayMode = LevelBaseAddress + offset * OffsetMultiplier + FreeplayOffset;
+            byte* storyMode = LevelBaseAddress + (offset * OffsetMultiplier) + StoryOffset;
+            byte* freeplayMode = LevelBaseAddress + (offset * OffsetMultiplier) + FreeplayOffset;
             *storyMode = 0;
             *freeplayMode = 0;
         }
@@ -93,8 +93,8 @@ public class LevelHandler
             return;
         }
         int offset = LevelMemoryOffsets[itemID];
-        byte* storySuperHero = LevelBaseAddress + offset * OffsetMultiplier + StoryTrueSuperHeroOffset;
-        byte* freeplaySuperHero = LevelBaseAddress + offset * OffsetMultiplier + FreeplaySuperHeroOffset;
+        byte* storySuperHero = LevelBaseAddress + (offset * OffsetMultiplier) + StoryTrueSuperHeroOffset;
+        byte* freeplaySuperHero = LevelBaseAddress + (offset * OffsetMultiplier) + FreeplaySuperHeroOffset;
         *storySuperHero = 1;
         *freeplaySuperHero = 1;
     }
@@ -109,10 +109,90 @@ public class LevelHandler
                 Mod.PrintToLog("Level Base Address is null. Please report to a dev. Aborting.");
                 return;
             }
-            byte* storySuperHero = LevelBaseAddress + offset * OffsetMultiplier + StoryTrueSuperHeroOffset;
-            byte* freeplaySuperHero = LevelBaseAddress + offset * OffsetMultiplier + FreeplaySuperHeroOffset;
+            byte* storySuperHero = LevelBaseAddress + (offset * OffsetMultiplier) + StoryTrueSuperHeroOffset;
+            byte* freeplaySuperHero = LevelBaseAddress + (offset * OffsetMultiplier) + FreeplaySuperHeroOffset;
             *storySuperHero = 0;
             *freeplaySuperHero = 0;
+        }
+    }
+
+    // Base Address and helper functions to handle minikit counts
+    private static unsafe byte* MinikitCountBase => *(byte**)(Mod.BaseAddress + 0x5C59CC);
+    private const int MinikitOffset = 0x77DD;
+
+    public static unsafe void UpdateMinikitCounts(bool isResetToItems)
+    {
+        int minikitMultiplier = isResetToItems ? Mod.LB1_AP!.SlotDataInstance!.MinikitGrouping : 1;
+        if (minikitMultiplier == -1)
+        {
+            Mod.PrintToLog("Minikit Multiplier is -1, can't reset minikit counts");
+            return;
+        }
+
+        byte* minikitCountBase = MinikitCountBase;
+        if (minikitCountBase == null)
+        {
+            Mod.PrintToLog("Minikit Count Base Address is null. Please report to a dev. Aborting.");
+            return;
+        }
+
+        int itemIDStart = isResetToItems
+            ? minikitMultiplier switch
+            {
+                <= 1 => 0,
+                <= 2 => 30,
+                <= 5 => 60,
+                <= 10 => 90,
+                _ => 0
+            }
+            : 0;
+        int currentLevelID = ConvertLevelIDToArchiID();
+        byte* inLevelCount1 = (byte*)(Mod.BaseAddress + 0x6CA424);
+        byte* inLevelCount2 = (byte*)(Mod.BaseAddress + 0x6CA42C);
+
+        for (int levelID = 0; levelID < LevelMemoryOffsets.Length; levelID++)
+        {
+            int minikitCount = isResetToItems
+                ? Mod.LB1_AP!.CountItemsReceivedWithId(itemIDStart + levelID + Game.MinikitOffset) * minikitMultiplier
+                : Mod.LB1_AP!.CountLocationsCheckedInRange(
+                    levelID * 10 + Game.MinikitOffset,
+                    levelID * 10 + 9 + Game.MinikitOffset);
+
+            if (minikitCount > 10)
+            {
+                minikitCount = 10;
+            }
+
+            int offset = LevelMemoryOffsets[levelID];
+            byte* minikitAddress = minikitCountBase + (offset * OffsetMultiplier) + MinikitOffset;
+            *minikitAddress = (byte)minikitCount;
+
+            if (levelID == currentLevelID)
+            {
+                *inLevelCount1 = (byte)minikitCount;
+                *inLevelCount2 = (byte)minikitCount;
+            }
+        }
+    }
+
+    public static unsafe void ResetMinikitCount()
+    {
+        foreach (int offset in LevelMemoryOffsets)
+        {
+            if (MinikitCountBase == null)
+            {
+                Mod.PrintToLog("Minikit Count Base Address is null. Please report to a dev. Aborting.");
+                return;
+            }
+            byte* minikitCount = MinikitCountBase + (offset * OffsetMultiplier) + MinikitOffset;
+            *minikitCount = 0;
+        }
+        if (!Game.IsInHub())
+        {
+            byte* inLevelCount1 = (byte*)(Mod.BaseAddress + 0x6CA424);
+            byte* inLevelCount2 = (byte*)(Mod.BaseAddress + 0x6CA42C);
+            *inLevelCount1 = 0;
+            *inLevelCount2 = 0;
         }
     }
 
@@ -219,7 +299,6 @@ public class LevelHandler
         }
 
         *(HostageArray + itemID / 8) |= (byte)(1 << (itemID % 8));
-        // TODO: May need to adjust how we handle the count for Hush character unlock
         *HostageCount += 1;
     }
 

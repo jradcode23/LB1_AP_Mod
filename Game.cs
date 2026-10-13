@@ -80,7 +80,7 @@ public class Game
     }
 
     private const int SuitOffset = 80;
-    private const int MinikitOffset = 100;
+    public const int MinikitOffset = 100;
     private const int HostageOffset = 400;
     public const int LevelOffset = 425;
     private const int TrueSuperHeroOffset = 455;
@@ -365,7 +365,7 @@ public class Game
         }
     }
 
-    private static bool IsInHub()
+    public static bool IsInHub()
     {
         return HubMapIDs.Contains(Mod.GameInstance!.MapID);
     }
@@ -373,7 +373,7 @@ public class Game
     [Function([FunctionAttribute.Register.ecx],
     FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
     public delegate void UpdateMap(ushort ecx);
-    private static unsafe void OnMapUpdate(ushort ecx)
+    private static void OnMapUpdate(ushort ecx)
     {
         Mod.PrintToLog($"Map ID Updated to: {ecx}");
         Mod.GameInstance!.MapID = ecx;
@@ -393,7 +393,7 @@ public class Game
             ClearMinikitCodes();
             Mod.LB1_AP!.UpdateBasedOnItems(0, SuitOffset - 1);
             Mod.LB1_AP!.UpdateBasedOnLocations(SuitOffset, MinikitOffset - 1);
-            Mod.LB1_AP!.UpdateBasedOnItems(MinikitOffset, HostageOffset - 1);
+            LevelHandler.UpdateMinikitCounts(true);
             Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, LevelOffset - 1);
             Mod.LB1_AP!.UpdateBasedOnItems(LevelOffset, TrueSuperHeroOffset - 1);
             Mod.LB1_AP!.UpdateBasedOnLocations(TrueSuperHeroOffset, RedBrickOffset - 1);
@@ -402,8 +402,9 @@ public class Game
         else
         {
             Mod.LB1_AP!.UpdateBasedOnItems(0, MinikitOffset - 1);
+            LevelHandler.UpdateMinikitCounts(false);
             Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, RedBrickOffset - 1);
-            Mod.LB1_AP!.UpdateBasedOnItems(TrueSuperHeroOffset, MaxItemID);
+            Mod.LB1_AP!.UpdateBasedOnItems(RedBrickOffset, MaxItemID);
         }
     }
 
@@ -430,6 +431,7 @@ public class Game
             }
             Mod.PrintToLog("Menu In Hub Opened");
             Mod.LB1_AP!.UpdateBasedOnItems(0, MaxItemID);
+            LevelHandler.UpdateMinikitCounts(true);
         }
         else if (IsInHub() && ecx == 0x2C) // Open Shop
         {
@@ -439,6 +441,7 @@ public class Game
             }
             Mod.PrintToLog("Shop In Hub Opened");
             Mod.LB1_AP!.UpdateBasedOnLocations(0, MaxItemID);
+            LevelHandler.UpdateMinikitCounts(false);
             Shop.ResetShopPurchaseLocks();
             if (Mod.LB1_AP!.SlotDataInstance!.SimpleEpisodeCharacters == 1)
             {
@@ -449,12 +452,12 @@ public class Game
         {
             Mod.PrintToLog("Level Selector In Hub Opened");
             Mod.LB1_AP!.UpdateBasedOnItems(0, MinikitOffset - 1);
-            Mod.LB1_AP!.UpdateBasedOnItems(MinikitOffset, HostageOffset - 1);
+            LevelHandler.UpdateMinikitCounts(false);
             Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, LevelOffset - 1);
             Mod.LB1_AP!.UpdateBasedOnItems(LevelOffset, TrueSuperHeroOffset - 1);
             Mod.LB1_AP!.UpdateBasedOnLocations(TrueSuperHeroOffset, MaxItemID);
         }
-        else if (LevelHandler.CheckStatusMap(Mod.GameInstance!.MapID) == -1)
+        else if (LevelHandler.CheckStatusMap(Mod.GameInstance!.MapID) == -1) // In Level
         {
             lock (Mod.GameInstance!.StateLock)
             {
@@ -462,6 +465,7 @@ public class Game
             }
             Mod.PrintToLog("Menu in Level Opened");
             Mod.LB1_AP!.UpdateBasedOnItems(0, MinikitOffset - 1);
+            LevelHandler.UpdateMinikitCounts(false);
             Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, RedBrickOffset - 1);
             HintSystem.MakeMinikitCountAppear();
         }
@@ -490,7 +494,7 @@ public class Game
             {
                 Mod.LB1_AP!.UpdateBasedOnItems(0, SuitOffset - 1);
                 Mod.LB1_AP!.UpdateBasedOnLocations(SuitOffset, MinikitOffset - 1);
-                Mod.LB1_AP!.UpdateBasedOnItems(MinikitOffset, HostageOffset - 1);
+                LevelHandler.UpdateMinikitCounts(true);
                 Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, LevelOffset - 1);
                 Mod.LB1_AP!.UpdateBasedOnItems(LevelOffset, TrueSuperHeroOffset - 1);
                 Mod.LB1_AP!.UpdateBasedOnLocations(TrueSuperHeroOffset, RedBrickOffset - 1);
@@ -499,8 +503,9 @@ public class Game
             else
             {
                 Mod.LB1_AP!.UpdateBasedOnItems(0, MinikitOffset - 1);
+                LevelHandler.UpdateMinikitCounts(false);
                 Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, RedBrickOffset - 1);
-                Mod.LB1_AP!.UpdateBasedOnItems(TrueSuperHeroOffset, MaxItemID);
+                Mod.LB1_AP!.UpdateBasedOnItems(RedBrickOffset, MaxItemID);
             }
             HintSystem.MakeMinikitCountDisappear();
         }
@@ -628,6 +633,7 @@ public class Game
         CharacterHandler.ResetUnlockedCharacters();
         LevelHandler.ResetLevels();
         LevelHandler.ResetHostages();
+        LevelHandler.ResetMinikitCount();
         LevelHandler.ResetTrueSuperHeroes();
         Shop.ResetRedBricks();
         Suits.ResetSuits();
