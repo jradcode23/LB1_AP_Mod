@@ -118,7 +118,7 @@ public class ArchipelagoHandler
         catch (Exception e)
         {
             result = new LoginFailure(e.GetBaseException().Message);
-            // HintSystem.UpdateConnectionStatusText("Failed To Connect");
+            HintSystem.UpdateConnectionStatusText("Failed To Connect");
         }
 
         if (result.Successful)
@@ -159,7 +159,7 @@ public class ArchipelagoHandler
 
     /* 
     Tells archi want we want to do when an item is received. 
-    Majority of items besides the groupings in this function are given to the player when they sync up with the item/location container. 
+    Majority of items besides the groupings in this function are given to the player when they sync up with the "item" state or "location" state. 
     However, there are a few we want the player to have instantaneously so we handle those instances here.
     */
     private void ItemReceived(ReceivedItemsHelper helper)
@@ -269,6 +269,7 @@ public class ArchipelagoHandler
         }
     }
 
+    // This function is to ensure that our threads are active and running. Set up like this in case there is a disconnect and reconnect to the server.
     private void EnsureBackgroundThreads()
     {
         if (_locationsThread == null || !_locationsThread.IsAlive)
@@ -301,7 +302,7 @@ public class ArchipelagoHandler
         // }
     }
 
-    // If there are instantenous items (like purple studs and in the future traps) that we queue up because the player wasn't controllable, this is a separate thread that waits until the player is controllable to pass them the item. 
+    // If there are instantenous items (like purple studs and in the future traps) that we queued up because the player wasn't controllable, this is a separate thread that waits until the player is controllable to pass them the item. 
     public void HandleQueuedItems()
     {
         // while (true)
@@ -390,7 +391,7 @@ public class ArchipelagoHandler
         }
     }
 
-    // Helper Function to count how many items inbetween a certain archi ID range have been received
+    // Helper Function to count how many locations inbetween a certain archi ID range have been checked
     public int CountLocationsCheckedInRange(Int64 start, Int64 end)
     {
         lock (_locationsLock)
@@ -401,7 +402,7 @@ public class ArchipelagoHandler
         }
     }
 
-    // Helper Function to count how many items with a specific archi ID (i.e. gold brick or purple stud) have been received
+    // Helper Function to count how many items with a specific archi ID (i.e.  purple stud) have been received
     public int CountItemsReceivedWithId(Int64 gameId)
     {
         lock (_itemsLock)
@@ -440,15 +441,13 @@ public class ArchipelagoHandler
         return 5; // Default flag which is gray
     }
 
-    // Helper Function to handle Messages received from the server
+    // Helper Function to handle Messages received from the server based on their type (hint/Item/Goal/Cheat)
     private static void OnMessageReceived(LogMessage message)
     {
         byte itemFlag;
         switch (message)
         {
-            // Implementation for when hint messages are received from the server
             case HintItemSendLogMessage hintMessage:
-                // Currently printing all hint messages in case it breaks something
                 Mod.PrintToLog($"Hint Message Received: {hintMessage.ToString() ?? string.Empty}");
                 itemFlag = GetItemFlag(hintMessage.Item);
                 string hntmsg = hintMessage.ToString() ?? string.Empty;
@@ -462,7 +461,6 @@ public class ArchipelagoHandler
                 HintSystem.EnqueueMessage(hntmsg, itemFlag);
                 break;
             case ItemSendLogMessage itemMessage:
-                // Currently printing all Item messages in case it breaks something
                 Mod.PrintToLog($"Item Message Received: {itemMessage.ToString() ?? string.Empty}");
                 itemFlag = GetItemFlag(itemMessage.Item);
                 string itmmsg = itemMessage.ToString() ?? string.Empty;
@@ -484,27 +482,29 @@ public class ArchipelagoHandler
                 Prints the message type too in case there is something we want to print in the future
                 */
                 Mod.PrintToLog($"{message.GetType().Name} Received: {message.ToString() ?? string.Empty}");
+                // If it is a Cheat Console message, we want to print that out too. The message type in the library doesn't seem to work so we do a string search.
                 bool isCheatMessage = message.ToString() != null && message.ToString().Contains("Cheat console");
                 if (isCheatMessage)
                 {
-                    HintSystem.EnqueueMessage(message.ToString(), 3); // If we get a cheat console message, we want to print it
+                    HintSystem.EnqueueMessage(message.ToString(), 3);
                 }
                 break;
         }
     }
 
-    public void UpdateTags(string[] tags)
-    {
-        if (!IsConnected || _session == null)
-        {
-            Mod.PrintToLog("Not connected to Archipelago server. Cannot update tags.");
-            return;
-        }
-        var packet = new ConnectUpdatePacket
-        {
-            Tags = tags,
-            ItemsHandling = ItemsHandlingFlags.AllItems
-        };
-        _session.Socket.SendPacket(packet);
-    }
+    // Saving for death link implementation later. used to update archi tags
+    // public void UpdateTags(string[] tags)
+    // {
+    //     if (!IsConnected || _session == null)
+    //     {
+    //         Mod.PrintToLog("Not connected to Archipelago server. Cannot update tags.");
+    //         return;
+    //     }
+    //     var packet = new ConnectUpdatePacket
+    //     {
+    //         Tags = tags,
+    //         ItemsHandling = ItemsHandlingFlags.AllItems
+    //     };
+    //     _session.Socket.SendPacket(packet);
+    // }
 }

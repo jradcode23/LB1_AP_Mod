@@ -563,6 +563,7 @@ public class Game
         CheckAndReportLocation(itemId + HostageOffset);
     }
 
+    // This function funs when the player achieves True Super hero in a level. It will check to see what level the player is in and report the location to archipelago.
     [Function(CallingConventions.Fastcall)]
     public delegate void TrueSuperHero();
     private static void OnTrueSuperHero()
@@ -574,6 +575,7 @@ public class Game
         }
     }
 
+    // This function runs when a player changes suit by entering a suit changer. It will report the suit as worn to archipelago.
     [Function([FunctionAttribute.Register.edx],
     FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
     public delegate void ChangeSuitWorn(ushort edx);
@@ -588,6 +590,7 @@ public class Game
         }
     }
 
+    // This function runs when the game tries to change the suit appearing on a suit changer. If the player doesn't have it unlocked, it changes the last 2 bytes to the "empty/blocked" suit code.
     [Function([FunctionAttribute.Register.eax,],
     FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
     public delegate uint ChangeSuitSignal(uint eax);
@@ -617,6 +620,7 @@ public class Game
         return eax;
     }
 
+    // This function runs when the player purchases a red brick (extra/suit upgrade). It performs a bit operation to determine which one was purchased and reports the archi location
     [Function([FunctionAttribute.Register.eax, FunctionAttribute.Register.edx],
     FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
     public delegate void PurchaseRedBrick(uint eax, uint edx);
@@ -639,6 +643,7 @@ public class Game
         }
     }
 
+    // This function runs when the player picks up a stud. As a QOL, we save any stud collected by the player regardless of whether they can beat the level or not.
     [Function([FunctionAttribute.Register.ecx, FunctionAttribute.Register.edi],
     FunctionAttribute.Register.edi, FunctionAttribute.StackCleanup.Callee)]
     // edi is the stud value picked up and ecx is the address it is being written to
@@ -657,6 +662,7 @@ public class Game
         return;
     }
 
+    // This function runs when the game sets the timer to max. It is used to determine if one of our messages was interupted and add it back to the queue.
     [Function(CallingConventions.Fastcall)]
     private delegate void HandleInterruptedMessage();
     private static void OnHandleInterruptedMessage()
@@ -664,7 +670,7 @@ public class Game
         HintSystem.HandleInterruptedMessage();
     }
 
-
+    // Helper function to report an Archi location as completed.
     public static void CheckAndReportLocation(int apID)
     {
         if (Mod.LB1_AP!.IsLocationChecked(apID))
@@ -676,6 +682,7 @@ public class Game
         Mod.LB1_AP!.CheckLocation(apID);
     }
 
+    // Helper function that resets all items/locations to locked state.
     private static void ResetItems()
     {
         CharacterHandler.ResetUnlockedCharacters();
@@ -687,6 +694,7 @@ public class Game
         Suits.ResetSuits();
     }
 
+    // Helper function to determine if the player has achieved their win con
     public static void CheckWinCon()
     {
         // Minikits

@@ -9,6 +9,8 @@ public class LevelHandler
     private const int FreeplayOffset = 3;
     private const int OffsetMultiplier = 4;
 
+    // int array containing all the memory offsets for each of the levels.
+    // This is primarily used to get the appropriate offset for receiving/sending their collectibles.
     private static readonly int[] LevelMemoryOffsets = [
         0x09, // H1-1
         0x0C, // H1-2
@@ -116,7 +118,11 @@ public class LevelHandler
         }
     }
 
-    // Base Address and helper functions to handle minikit counts
+    /* 
+        Base Address and helper functions to handle minikit counts. 
+        When switching between "location" state & "item" state, we adjust the count shown in hub & in level
+        If we are resetting to "item" state, we have logic in place to handle minikit grouping.
+    */
     private static unsafe byte* MinikitCountBase => *(byte**)(Mod.BaseAddress + 0x5C59CC);
     private const int MinikitOffset = 0x77DD;
 
@@ -175,6 +181,7 @@ public class LevelHandler
         }
     }
 
+    // Helper function to reset the associated minikit counts (1 is each level in hub & 2 of them are kept track of in level)
     public static unsafe void ResetMinikitCount()
     {
         foreach (int offset in LevelMemoryOffsets)
@@ -196,6 +203,7 @@ public class LevelHandler
         }
     }
 
+    // int array containing the map IDs for all the status screens
     private static readonly int[] StatusScreenMapId = [
         0x16, // H1-1
         0x22, // H1-2
@@ -235,6 +243,7 @@ public class LevelHandler
         return Array.IndexOf(StatusScreenMapId, mapID);
     }
 
+    // int array containing all the levels in game "level ID" missing ones are either hub/menu/cut content
     private static readonly int[] LevelIDs = [
         0x03, // H1-1
         0x04, // H1-2
@@ -268,6 +277,7 @@ public class LevelHandler
         0x25, // V3-5
     ];
 
+    // Helper function to determine the current level ID. Used for minikits and true super hero
     public static unsafe int ConvertLevelIDToArchiID()
     {
         byte* levelID = (byte*)(Mod.BaseAddress + 0x5629C4);
