@@ -98,7 +98,7 @@ public class ArchipelagoHandler
         {
             // Check to see if Game/Menu is loaded before trying to connect, we do this to mitigate impact of null values and the game changing things later.
             Game.IsGameLoaded();
-            // HintSystem.UpdateConnectionStatusText("Connecting. Please wait");
+            HintSystem.UpdateConnectionStatusText("Connecting. Please wait");
             Seed = Session.ConnectAsync()?.Result?.SeedName;
             Mod.PrintToLog(Seed + Slot);
 
@@ -129,19 +129,19 @@ public class ArchipelagoHandler
             SlotDataInstance.PrintData();
             // var locationIDs = BuildLocationIds();
             // var scouting = Session.Locations.ScoutLocationsAsync(HintCreationPolicy.None, locationIDs);
-            // HintSystem.UpdateConnectionStatusText("Hooking, Please Wait");
+            HintSystem.UpdateConnectionStatusText("Hooking, Please Wait");
             // Modify the game now that we are connected
             bool isHooked = Mod.InitOnMenu();
             // Store our slot name in game to access later
             // Mod.GameInstance!.PlayerName = Slot;
-            // if (isHooked)
-            // {
-            //     HintSystem.UpdateConnectionStatusText("Ready to Play");
-            // }
-            // else
-            // {
-            //     HintSystem.UpdateConnectionStatusText("Failed To Hook");
-            // }
+            if (isHooked)
+            {
+                HintSystem.UpdateConnectionStatusText("Connected. Ready to Play");
+            }
+            else
+            {
+                HintSystem.UpdateConnectionStatusText("Failed To Hook");
+            }
             EnsureBackgroundThreads();
             // scouting.Wait();
             // ScoutedLocations = scouting.Result;

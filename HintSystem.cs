@@ -224,29 +224,29 @@ public class HintSystem
         WriteTextToMemory(message, (uint)BatmanGrappleHintAddress);
     }
 
-    // // New Game text on the main menu. We show connection status here.
-    // public static unsafe byte* NewGameTextAddress => *(byte**)(*(byte**)(Mod.BaseAddress + 0xB16750) + 0xC);
-    // private static byte[] OriginalNewGameText = new byte[30];
+    // New Game text on the main menu. We show connection status here.
+    private static byte[] OriginalNewGameText = new byte[30];
+    private static unsafe byte* NewGameTextAddress => *(byte**)(HintMessageBaseAddress + 0xFC);
 
-    // public static unsafe void UpdateConnectionStatusText(string status)
-    // {
-    //     if (OriginalNewGameText[0] == 0)
-    //     {
-    //         for (int i = 0; i < OriginalNewGameText.Length; i++)
-    //         {
-    //             OriginalNewGameText[i] = *(NewGameTextAddress + i);
-    //         }
-    //     }
-    //     WriteTextToMemory(status, (uint)NewGameTextAddress);
-    // }
+    public static unsafe void UpdateConnectionStatusText(string status)
+    {
+        if (OriginalNewGameText[0] == 0)
+        {
+            for (int i = 0; i < OriginalNewGameText.Length; i++)
+            {
+                OriginalNewGameText[i] = *(NewGameTextAddress + i);
+            }
+        }
+        WriteTextToMemory(status, (uint)NewGameTextAddress);
+    }
 
-    // public static unsafe void RestoreNewGamePtr()
-    // {
-    //     for (int i = 0; i < OriginalNewGameText.Length; i++)
-    //     {
-    //         *(NewGameTextAddress + i) = OriginalNewGameText[i];
-    //     }
-    // }
+    public static unsafe void RestoreNewGameText()
+    {
+        for (int i = 0; i < OriginalNewGameText.Length; i++)
+        {
+            *(NewGameTextAddress + i) = OriginalNewGameText[i];
+        }
+    }
 
     private static unsafe float* MinikitTimer => (float*)(Mod.BaseAddress + 0x6D10DC);
 

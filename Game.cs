@@ -389,8 +389,18 @@ public class Game
     public delegate void UpdateMap(ushort ecx);
     private static void OnMapUpdate(ushort ecx)
     {
+        if (Mod.GameInstance!.MapID == 0x0) // Coming from the menu
+        {
+            HintSystem.RestoreNewGameText();
+        }
         Mod.PrintToLog($"Map ID Updated to: {ecx}");
         Mod.GameInstance!.MapID = ecx;
+
+        if (ecx == 0x0) // Going to menu
+        {
+            string message = ArchipelagoHandler.IsConnected ? "Connected. Ready to Play" : "Connecting. Please wait";
+            HintSystem.UpdateConnectionStatusText(message);
+        }
 
         int levelCompletedID = LevelHandler.CheckStatusMap(ecx);
         if (levelCompletedID != -1)
@@ -425,7 +435,7 @@ public class Game
         }
     }
 
-    private static readonly ushort[] HubMapIDs = [0x9, 0xA, 0x5];
+    private static readonly ushort[] HubMapIDs = [0x6, 0x9, 0xA, 0x5];
 
     [Function([FunctionAttribute.Register.edx, FunctionAttribute.Register.ecx],
     FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
