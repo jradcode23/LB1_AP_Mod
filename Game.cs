@@ -397,10 +397,13 @@ public class Game
         {
             CheckAndReportLocation(levelCompletedID + LevelOffset);
             CharacterHandler.SendVanillaCharacters(levelCompletedID);
-            CheckWinCon();
         }
         ResetItems();
         Mod.LB1_AP!.SendMapID(Mod.GameInstance!.MapID);
+        if (Mod.GameInstance!.MapID == 0x6)
+        {
+            CheckWinCon();
+        }
         // TODO: This code may be a little repetive right now with the subsequent functions, once other items are implemented, can see what we want to do
         if (IsInHub())
         {
@@ -446,6 +449,7 @@ public class Game
             Mod.PrintToLog("Menu In Hub Opened");
             Mod.LB1_AP!.UpdateBasedOnItems(0, MaxItemID);
             LevelHandler.UpdateMinikitCounts(true);
+            HintSystem.UpdateWinConText();
         }
         else if (IsInHub() && ecx == 0x2C) // Open Shop
         {
@@ -482,6 +486,7 @@ public class Game
             LevelHandler.UpdateMinikitCounts(false);
             Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, RedBrickOffset - 1);
             HintSystem.MakeMinikitCountAppear();
+            HintSystem.UpdateWinConText();
         }
     }
 
@@ -522,6 +527,7 @@ public class Game
                 Mod.LB1_AP!.UpdateBasedOnItems(RedBrickOffset, MaxItemID);
             }
             HintSystem.MakeMinikitCountDisappear();
+            HintSystem.RestoreWinConText();
         }
     }
 

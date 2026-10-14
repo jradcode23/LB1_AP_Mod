@@ -166,12 +166,8 @@ public class ArchipelagoHandler
     {
         while (helper.Any())
         {
-            var item = helper.DequeueItem();
-            int gameID = (int)item.ItemId - gameOffset;
-            if (gameID >= 100 && gameID < 400 && Mod.LB1_AP!.SlotDataInstance!.EndGoal == 0) // Check Minikit Wincon
-            {
-                Game.CheckWinCon();
-            }
+            // var item = helper.DequeueItem();
+            // int gameID = (int)item.ItemId - gameOffset;
             //     bool prevInShop = false, prevInLevelSelect = false;
 
             // Verify if the player is in a shop or in the level selector since we give them certain items instantly if they are

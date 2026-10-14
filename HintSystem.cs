@@ -54,6 +54,7 @@ public class HintSystem
     private const uint GrappleCode = 0x93CE04;
     private static unsafe uint* HintMessageBaseAddress => *(uint**)(Mod.BaseAddress + 0x6957F8);
     private static unsafe uint* BatmanAttackHintAddress => *(uint**)(HintMessageBaseAddress + 0x19C);
+    private static unsafe uint* BatmanGrappleHintAddress => *(uint**)(HintMessageBaseAddress + 0x191);
 
     // Limiting the text to 255 characters. Can potentially handle more, but this should be sufficient and prevent unexpected crashes.
     private const int MaxMessageLength = 255;
@@ -173,51 +174,55 @@ public class HintSystem
         Memory.Instance.SafeWrite(memoryAddress, bytes);
     }
 
-    // private static uint OriginalPausedAddress = 0;
+    private static uint OriginalPausedAddress = 0;
+    private static unsafe uint* PausedTextBaseAddress => *(uint**)(Mod.BaseAddress + 0x6957F8) + 0x100;
 
     // // This is a helper function that verifies the count of horcruxes received and updates the on screen text
-    // public static unsafe void UpdateWinConText()
-    // {
-    //     uint* pausedTextBaseAddress = *(uint**)(Mod.BaseAddress + 0xAE6E58) + 0xE5;
-    //     if (OriginalPausedAddress == 0)
-    //     {
-    //         OriginalPausedAddress = (uint)*(byte**)pausedTextBaseAddress;
-    //         Mod.PrintToLog($"Set OriginalPausedAddress to: 0x{OriginalPausedAddress:X}");
-    //     }
+    public static unsafe void UpdateWinConText()
+    {
+        if (OriginalPausedAddress == 0)
+        {
+            OriginalPausedAddress = (uint)*(byte**)PausedTextBaseAddress;
+            Mod.PrintToLog($"Set OriginalPausedAddress to: 0x{OriginalPausedAddress:X}");
+        }
 
-    //     *pausedTextBaseAddress = *UseMagicAsHarryTextAddress;
+        *PausedTextBaseAddress = (uint)BatmanGrappleHintAddress;
 
-    //     if (Mod.LB1_AP!.SlotDataInstance!.EndGoal == 0)
-    //     {
-    //         byte HorcruxCount = (byte)Mod.LHP2_Archipelago!.CountItemsCheckedInRange(440, 446);
-    //         DisplayHorcruxCount(HorcruxCount);
-    //     }
-    //     if (Mod.LHP2_Archipelago!.SlotDataInstance!.EndGoal == 2)
-    //     {
-    //         byte levelsBeaten = (byte)Mod.LHP2_Archipelago!.CountLocationsCheckedInRange(450, 473);
-    //         DisplayLevelsBeaten(levelsBeaten);
-    //     }
-    // }
+        if (Mod.LB1_AP!.SlotDataInstance!.EndGoal == 0)
+        {
+            int minikitCount = MinikitHandler.GetMinikitsReceivedCount();
+            DisplayMinikitCount(minikitCount);
+        }
+        if (Mod.LB1_AP!.SlotDataInstance!.EndGoal == 1)
+        {
+            byte levelsBeaten = (byte)Mod.LB1_AP!.CountLocationsCheckedInRange(425, 454);
+            DisplayLevelsBeaten(levelsBeaten);
+        }
+    }
 
-    // public static unsafe void RestoreWinConText()
-    // {
-    //     uint* pausedTextBaseAddress = *(uint**)(Mod.BaseAddress + 0xAE6E58) + 0xE5;
-    //     *pausedTextBaseAddress = OriginalPausedAddress;
-    // }
+    public static unsafe void RestoreWinConText()
+    {
+        if (OriginalPausedAddress == 0)
+        {
+            Mod.PrintToLog("Pause Address not set yet. Returning");
+            return;
+        }
+        *PausedTextBaseAddress = OriginalPausedAddress;
+    }
 
-    // // Helper function to write the received Horcrux count to the Player 2 slot name
-    // public static unsafe void DisplayHorcruxCount(byte count)
-    // {
-    //     string message = $"Horcruxes Collected: {count}/{Mod.LHP2_Archipelago!.SlotDataInstance!.NumberOfRequiredHorcruxes}";
-    //     WriteTextToMemory(message, *UseMagicAsHarryTextAddress);
-    // }
+    // Helper function to write the received Horcrux count to the Player 2 slot name
+    private static unsafe void DisplayMinikitCount(int count)
+    {
+        string message = $"Minikits Received: {count}/{Mod.LB1_AP!.SlotDataInstance!.MinikitsToWin}";
+        WriteTextToMemory(message, (uint)BatmanGrappleHintAddress);
+    }
 
-    // // Helper function to write the Levels Beaten to the Player 2 slot name
-    // public static unsafe void DisplayLevelsBeaten(byte count)
-    // {
-    //     string message = $"Levels Beaten: {count}/{Mod.LHP2_Archipelago!.SlotDataInstance!.NumberOfRequiredLevels}";
-    //     WriteTextToMemory(message, *UseMagicAsHarryTextAddress);
-    // }
+    // Helper function to write the Levels Beaten to the Player 2 slot name
+    private static unsafe void DisplayLevelsBeaten(byte count)
+    {
+        string message = $"Levels Beaten: {count}/{Mod.LB1_AP!.SlotDataInstance!.LevelsToWin}";
+        WriteTextToMemory(message, (uint)BatmanGrappleHintAddress);
+    }
 
     // // New Game text on the main menu. We show connection status here.
     // public static unsafe byte* NewGameTextAddress => *(byte**)(*(byte**)(Mod.BaseAddress + 0xB16750) + 0xC);
