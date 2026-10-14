@@ -33,6 +33,8 @@ public class Game
         Memory.Instance.SafeWrite(Mod.BaseAddress + 0x1D522D, [0x90, 0x90, 0x90, 0x90, 0x90, 0x90]);
         // NOP the code that writes to the Minikit on screen timer (keeping the pop but removing the write
         Memory.Instance.SafeWrite(Mod.BaseAddress + 0xDC040, [0xDD, 0xD8, 0x90, 0x90, 0x90, 0x90]);
+        // NOP the code that moves the in level stud total to be moved into global total
+        Memory.Instance.SafeWrite(Mod.BaseAddress + 0x24D3B3, [0x90, 0x90, 0x90, 0x90, 0x90, 0x90]);
     }
 
     // Used to check if the game menu is loaded before connecting and trying to set up hooks
@@ -126,6 +128,7 @@ public class Game
     private static IReverseWrapper<ChangeSuitSignal> _reverseWrapOnChangeSuitSignal = default!;
     private static IReverseWrapper<PurchaseRedBrick> _reverseWrapOnPurchaseRedBrick = default!;
     private static IReverseWrapper<HandleInterruptedMessage> _reverseWrapOnHandleInterruptedMessage = default!;
+    private static IReverseWrapper<StudCollected> _reverseWrapOnStudCollected = default!;
 
     // Modifying the associated assembly of our game to call our functions
     // TODO: Future proof this from game updates by implementing signature scanning
@@ -278,6 +281,17 @@ public class Game
             "popfd",
         };
         _asmHooks.Add(hooks.CreateAsmHook(handleInterruptedMessageHook, (int)(Mod.BaseAddress + 0x1D4E0E), AsmHookBehaviour.ExecuteFirst).Activate());
+
+        string[] collectStudHook =
+        {
+            "use32",
+            "pushfd",
+            "pushad",
+            $"{hooks.Utilities.GetAbsoluteCallMnemonics(OnStudCollected, out _reverseWrapOnStudCollected)}",
+            "popad",
+            "popfd",
+        };
+        _asmHooks.Add(hooks.CreateAsmHook(collectStudHook, (int)(Mod.BaseAddress + 0x1B22A9), AsmHookBehaviour.ExecuteFirst).Activate());
     }
 
     [Function([FunctionAttribute.Register.eax, FunctionAttribute.Register.edx],
@@ -607,6 +621,24 @@ public class Game
             }
             CheckAndReportLocation(itemId + RedBrickOffset);
         }
+    }
+
+    [Function([FunctionAttribute.Register.ecx, FunctionAttribute.Register.edi],
+    FunctionAttribute.Register.edi, FunctionAttribute.StackCleanup.Callee)]
+    // edi is the stud value picked up and ecx is the address it is being written to
+    public delegate void StudCollected(uint ecx, uint edi);
+    private static unsafe void OnStudCollected(uint ecx, uint edi)
+    {
+        uint* studTotalAddress = *(uint**)(Mod.BaseAddress + 0x5C59CC) + (0x7BD0 / 4);
+        uint* inLevelP1StudAddress = (uint*)(Mod.BaseAddress + 0x5C594C);
+        uint* inLevelP2StudAddress = (uint*)(Mod.BaseAddress + 0x5C595C);
+
+        if (ecx == (uint)inLevelP1StudAddress || ecx == (uint)inLevelP2StudAddress)
+        {
+            *studTotalAddress += edi;
+        }
+
+        return;
     }
 
     [Function(CallingConventions.Fastcall)]
