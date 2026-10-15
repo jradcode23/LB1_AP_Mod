@@ -323,6 +323,7 @@ public class CharacterHandler
         // We will have to expect the player to select the glide character
         bool isScientistUnlocked = Mod.LB1_AP!.CountItemsReceivedWithId(12) > 0;
         bool isTechSuitUnlocked = Mod.LB1_AP!.CountItemsReceivedWithId(87) > 0;
+        *Player1CharacterSelected = 0x0;
 
         if (isScientistUnlocked && !isTechSuitUnlocked)
         {
