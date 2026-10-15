@@ -213,7 +213,7 @@ public class Game
             "popad",
             "popfd",
         };
-        _asmHooks.Add(hooks.CreateAsmHook(hostageHook, (int)(Mod.BaseAddress + 0x253177), AsmHookBehaviour.ExecuteAfter).Activate());
+        _asmHooks.Add(hooks.CreateAsmHook(hostageHook, (int)(Mod.BaseAddress + 0x253177), AsmHookBehaviour.ExecuteFirst).Activate());
 
         string[] trueSuperHeroHook =
         {
@@ -495,6 +495,7 @@ public class Game
             Mod.LB1_AP!.UpdateBasedOnItems(0, MinikitOffset - 1);
             LevelHandler.UpdateMinikitCounts(false);
             Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, RedBrickOffset - 1);
+            Mod.LB1_AP!.UpdateBasedOnItems(RedBrickOffset, MaxItemID);
             HintSystem.MakeMinikitCountAppear();
             HintSystem.UpdateWinConText();
         }
@@ -554,12 +555,20 @@ public class Game
         }
     }
 
-    [Function([FunctionAttribute.Register.edx],
+    [Function([FunctionAttribute.Register.eax, FunctionAttribute.Register.edx],
     FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
-    public delegate void HostageRescue(uint edx);
-    private static void OnHostageRescue(uint edx)
+    public delegate void HostageRescue(int eax, uint edx);
+    private static unsafe void OnHostageRescue(int eax, uint edx)
     {
-        int itemId = BitOperations.TrailingZeroCount(edx);
+        byte* hostageArray = *(byte**)(Mod.BaseAddress + 0x6B09B0);
+        int byteOffset = (eax - (int)hostageArray) * 8;
+        int bitOffset = BitOperations.TrailingZeroCount(edx);
+        int itemId = byteOffset + bitOffset;
+        if (itemId < 0 || itemId > 25)
+        {
+            Mod.PrintToLog($"Cannot send hostage unlock. eax: 0x{eax:X}. hostageArray: 0x{(uint)hostageArray:X}. byteOffset: 0x{byteOffset:X}. bit offset: 0x{bitOffset:X}. itemID: {itemId}");
+            return;
+        }
         CheckAndReportLocation(itemId + HostageOffset);
     }
 
