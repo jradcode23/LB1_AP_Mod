@@ -68,10 +68,12 @@ public class HintSystem
             bool playerControllable = Game.IsPlayerControllable();
             bool notInShop;
             bool notInMenu;
+            bool notInLevelSelect;
             lock (Mod.GameInstance!.StateLock)
             {
                 notInShop = Mod.GameInstance!.isShopOpen == false;
                 notInMenu = Mod.GameInstance!.isMenuOpen == false;
+                notInLevelSelect = Mod.GameInstance!.isLevelSelectOpen == false;
             }
 
             // Timer for when a story (H1, V1, etc.) name is present on screen
@@ -82,7 +84,7 @@ public class HintSystem
             byte* YcbobEnemiesAddress = (byte*)(Mod.BaseAddress + 0x6CB68C);
             bool enemiesCanAttack = *YcbobEnemiesAddress == 0;
 
-            if (playerControllable && notInShop && notInMenu && hasStoryTimerCleared && enemiesCanAttack)
+            if (playerControllable && notInShop && notInMenu && notInLevelSelect && hasStoryTimerCleared && enemiesCanAttack)
             {
                 // verify if there is no message currently being printed or if the timer is maxed (at 7.5 seconds)
                 if (*HintCodeInterpreterAddress == 0 || *HintTimerAddress >= 7.5f)

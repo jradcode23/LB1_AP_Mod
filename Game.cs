@@ -6,6 +6,7 @@ using Reloaded.Hooks.Definitions.X86;
 using System.Numerics;
 using LB1_AP_Mod.Configuration;
 using LB1_AP_Mod;
+using System.IO.Pipes;
 
 namespace LB1_AP_Mod;
 
@@ -16,6 +17,7 @@ public class Game
     public readonly object StateLock = new();
     public bool isMenuOpen = false;
     public bool isShopOpen = false;
+    public bool isLevelSelectOpen = false;
     // After Connecting, this function reads initial game variables and NOPs code that we don't want running
     public static unsafe void ModifyInstructions()
     {
@@ -442,6 +444,16 @@ public class Game
     public delegate void OpenMenu(ushort edx, byte ecx);
     private static void OnOpenMenu(ushort edx, byte ecx)
     {
+        // Sometimes we need to change the character selectedby Player 2. This first section handles that
+        bool isInLevelSelect;
+        lock (Mod.GameInstance!.StateLock)
+        {
+            isInLevelSelect = Mod.GameInstance!.isLevelSelectOpen;
+        }
+        if (isInLevelSelect && edx == 3) // 3 is when the character selector is to open
+        {
+            CharacterHandler.HandleCharacterSelect();
+        }
 
         // ecx: 0x21 is menu, 0x2C is shop, & 0x2F is level
         if (edx != 1 || Mod.GameInstance!.MapID == 0)
@@ -479,6 +491,10 @@ public class Game
         else if (IsInHub() && ecx == 0x2F) // Open Level Selector
         {
             Mod.PrintToLog("Level Selector In Hub Opened");
+            lock (Mod.GameInstance!.StateLock)
+            {
+                Mod.GameInstance!.isLevelSelectOpen = true;
+            }
             Mod.LB1_AP!.UpdateBasedOnItems(0, MinikitOffset - 1);
             LevelHandler.UpdateMinikitCounts(false);
             Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, LevelOffset - 1);
@@ -507,17 +523,20 @@ public class Game
     {
         bool isInShop;
         bool isInMenu;
+        bool isInLevelSelect;
         lock (Mod.GameInstance!.StateLock)
         {
             isInShop = Mod.GameInstance!.isShopOpen;
             isInMenu = Mod.GameInstance!.isMenuOpen;
+            isInLevelSelect = Mod.GameInstance!.isLevelSelectOpen;
         }
-        if (isInMenu || isInShop)
+        if (isInMenu || isInShop || isInLevelSelect)
         {
             lock (Mod.GameInstance!.StateLock)
             {
                 Mod.GameInstance!.isMenuOpen = false;
                 Mod.GameInstance!.isShopOpen = false;
+                Mod.GameInstance!.isLevelSelectOpen = false;
             }
             ResetItems();
             if (IsInHub())

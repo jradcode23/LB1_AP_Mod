@@ -254,4 +254,83 @@ public class CharacterHandler
             }
         }
     }
+
+    private static readonly byte[] CarLevelIDs = [0x05];
+    private static readonly byte[] BoatLevelIDs = [0x0B, 0x1E];
+    private static readonly byte[] AirLevelIDs = [0x13, 0x22];
+    private static readonly ushort[] CarCharIDs = [0x81, 0x82, 0x119, 0x11A, 0x11F, 0x121, 0x110, 0xC6, 0xD2, 0xCD, 0x116, 0x11B];
+    private static readonly ushort[] BoatCharIDs = [0x84, 0xBD, 0x010D, 0xD1, 0x9E, 0xCE, 0xBA, 0xC0, 0x11D, 0x11E];
+    private static readonly ushort[] AirCharIDs = [0x83, 0xC4, 0x101, 0x112, 0x10F, 0xC1, 0xD0, 0x118, 0x11C, 0x122];
+    private const ushort RobinCharIDConst = 0x01;
+    private const ushort ScientistCharIDConst = 0x2B;
+    private static unsafe ushort* Player1CharacterSelected => (ushort*)(Mod.BaseAddress + 0x6CA814);
+    private static unsafe ushort* Player2CharacterSelected => (ushort*)(Mod.BaseAddress + 0x6CA816);
+    private static unsafe void UpdateVehicleLevelSelector(int archiIDStart, int archiIDEnd, ushort[] charIDs)
+    {
+        bool isUnlocked;
+        bool isPlayer2Complete = false;
+        int unlockedCount = Mod.LB1_AP!.CountItemsReceivedInRange(archiIDStart, archiIDEnd);
+        if (unlockedCount == 0)
+        {
+            *Player1CharacterSelected = charIDs[0];
+            *Player2CharacterSelected = charIDs[1];
+            return;
+        }
+        for (int i = archiIDStart; i <= archiIDEnd; i++)
+        {
+            isUnlocked = Mod.LB1_AP!.CountItemsReceivedWithId(i) > 0;
+            if (isUnlocked)
+            {
+                ushort characterID = charIDs[i - archiIDStart];
+                if (!isPlayer2Complete)
+                {
+                    *Player2CharacterSelected = characterID;
+                    isPlayer2Complete = true;
+                    continue;
+                }
+                *Player1CharacterSelected = characterID;
+                return;
+            }
+        }
+        ushort player1ID = *Player2CharacterSelected == charIDs[0] ? charIDs[1] : charIDs[0];
+        *Player1CharacterSelected = player1ID;
+
+    }
+    public static unsafe void HandleCharacterSelect()
+    {
+        byte* levelIDSelected = (byte*)(Mod.BaseAddress + 0x563898);
+        byte levelID = *levelIDSelected;
+
+        // These are used to move the 
+        if (CarLevelIDs.Contains(levelID))
+        {
+            UpdateVehicleLevelSelector(48, 59, CarCharIDs);
+            return;
+        }
+        if (BoatLevelIDs.Contains(levelID))
+        {
+            UpdateVehicleLevelSelector(60, 69, BoatCharIDs);
+            return;
+        }
+        if (AirLevelIDs.Contains(levelID))
+        {
+            UpdateVehicleLevelSelector(70, 79, AirCharIDs);
+            return;
+        }
+
+        // the Game doesn't alays select the scientist or a glide character even if they are unlocked. 
+        // This first section is to move the player2 character to select scientist if they have scientist and not tech suit.
+        // We will have to expect the player to select the glide character
+        bool isScientistUnlocked = Mod.LB1_AP!.CountItemsReceivedWithId(12) > 0;
+        bool isTechSuitUnlocked = Mod.LB1_AP!.CountItemsReceivedWithId(87) > 0;
+
+        if (isScientistUnlocked && !isTechSuitUnlocked)
+        {
+            *Player2CharacterSelected = ScientistCharIDConst;
+        }
+        else
+        {
+            *Player2CharacterSelected = RobinCharIDConst;
+        }
+    }
 }
