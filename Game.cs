@@ -89,7 +89,7 @@ public class Game
     public const int LevelOffset = 425;
     private const int TrueSuperHeroOffset = 455;
     public const int RedBrickOffset = 485;
-    private const int MaxItemID = 521;
+    public const int MaxItemID = 521;
     public static void ManageItem(int itemID)
     {
         switch (itemID)
@@ -131,6 +131,9 @@ public class Game
     private static IReverseWrapper<PurchaseRedBrick> _reverseWrapOnPurchaseRedBrick = default!;
     private static IReverseWrapper<HandleInterruptedMessage> _reverseWrapOnHandleInterruptedMessage = default!;
     private static IReverseWrapper<StudCollected> _reverseWrapOnStudCollected = default!;
+    private static IReverseWrapper<ShopItemSelected> _reverseWrapOnShopItemSelected = default!;
+    private static IReverseWrapper<OpenShopSubMenu> _reverseWrapOnOpenShopSubMenu = default!;
+    private static IReverseWrapper<CloseShopSubMenu> _reverseWrapOnCloseShopSubMenu = default!;
 
     // Modifying the associated assembly of our game to call our functions
     // TODO: Future proof this from game updates by implementing signature scanning
@@ -294,6 +297,41 @@ public class Game
             "popfd",
         };
         _asmHooks.Add(hooks.CreateAsmHook(collectStudHook, (int)(Mod.BaseAddress + 0x1B22A9), AsmHookBehaviour.ExecuteFirst).Activate());
+
+        string[] shopItemSelectedHook =
+        {
+            "use32",
+            "pushfd",
+            "pushad",
+            $"{hooks.Utilities.GetAbsoluteCallMnemonics(OnShopItemSelected, out _reverseWrapOnShopItemSelected)}",
+            "popad",
+            "popfd",
+        };
+        _asmHooks.Add(hooks.CreateAsmHook(shopItemSelectedHook, (int)(Mod.BaseAddress + 0xE8FD8), AsmHookBehaviour.ExecuteFirst).Activate()); // Characters
+        _asmHooks.Add(hooks.CreateAsmHook(shopItemSelectedHook, (int)(Mod.BaseAddress + 0xE90AE), AsmHookBehaviour.ExecuteFirst).Activate()); // Extras
+        _asmHooks.Add(hooks.CreateAsmHook(shopItemSelectedHook, (int)(Mod.BaseAddress + 0xE9229), AsmHookBehaviour.ExecuteFirst).Activate()); // Suits
+
+        string[] openShopSubMenuHook =
+        {
+            "use32",
+            "pushfd",
+            "pushad",
+            $"{hooks.Utilities.GetAbsoluteCallMnemonics(OnOpenShopSubMenu, out _reverseWrapOnOpenShopSubMenu)}",
+            "popad",
+            "popfd",
+        };
+        _asmHooks.Add(hooks.CreateAsmHook(openShopSubMenuHook, (int)(Mod.BaseAddress + 0xEF590), AsmHookBehaviour.ExecuteFirst).Activate());
+
+        string[] closeShopSubMenuHook =
+        {
+            "use32",
+            "pushfd",
+            "pushad",
+            $"{hooks.Utilities.GetAbsoluteCallMnemonics(OnCloseShopSubMenu, out _reverseWrapOnCloseShopSubMenu)}",
+            "popad",
+            "popfd",
+        };
+        _asmHooks.Add(hooks.CreateAsmHook(closeShopSubMenuHook, (int)(Mod.BaseAddress + 0xECB13), AsmHookBehaviour.ExecuteFirst).Activate());
     }
 
     [Function([FunctionAttribute.Register.eax, FunctionAttribute.Register.edx],
@@ -696,6 +734,48 @@ public class Game
     private static void OnHandleInterruptedMessage()
     {
         HintSystem.HandleInterruptedMessage();
+    }
+
+    [Function([FunctionAttribute.Register.eax],
+    FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
+    public delegate void ShopItemSelected(int eax);
+    private static unsafe void OnShopItemSelected(int eax)
+    {
+        byte* shopMenuOpenedAddress = (byte*)(Mod.BaseAddress + 0x5CCCE8);
+        int shopMenuOpened = *shopMenuOpenedAddress;
+        int itemOffset = shopMenuOpened switch
+        {
+            1 => Shop.shopCharacters[eax],
+            2 => RedBrickOffset + 1 + eax,
+            5 => RedBrickOffset + 21 + eax,
+            _ => -1
+        };
+        if (itemOffset == -1) // Other menu open
+        {
+            return;
+        }
+        Shop.HandleShopText(itemOffset);
+    }
+
+    [Function(CallingConventions.Fastcall)]
+    private delegate void OpenShopSubMenu();
+    private static unsafe void OnOpenShopSubMenu()
+    {
+        byte* shopMenuOpenedAddress = (byte*)(Mod.BaseAddress + 0x5CCCE8);
+        int shopMenuOpened = *shopMenuOpenedAddress;
+        if (shopMenuOpened == 1 || shopMenuOpened == 2 || shopMenuOpened == 5)
+        {
+            Mod.PrintToLog("Shop Sub menu opened. NOP'ing code");
+            Shop.NOPShopTextCode();
+        }
+    }
+
+    [Function(CallingConventions.Fastcall)]
+    private delegate void CloseShopSubMenu();
+    private static void OnCloseShopSubMenu()
+    {
+        Mod.PrintToLog("Shop Sub Menu closed. Restoring code");
+        Shop.RestoreShopTextCode();
     }
 
     // Helper function to report an Archi location as completed.

@@ -127,8 +127,8 @@ public class ArchipelagoHandler
             // Sets up slot Data
             SlotDataInstance = new(_loginSuccessful.SlotData);
             SlotDataInstance.PrintData();
-            // var locationIDs = BuildLocationIds();
-            // var scouting = Session.Locations.ScoutLocationsAsync(HintCreationPolicy.None, locationIDs);
+            var locationIDs = BuildLocationIds();
+            var scouting = Session.Locations.ScoutLocationsAsync(HintCreationPolicy.None, locationIDs);
             HintSystem.UpdateConnectionStatusText("Hooking, Please Wait");
             // Modify the game now that we are connected
             bool isHooked = Mod.InitOnMenu();
@@ -143,8 +143,8 @@ public class ArchipelagoHandler
                 HintSystem.UpdateConnectionStatusText("Failed To Hook");
             }
             EnsureBackgroundThreads();
-            // scouting.Wait();
-            // ScoutedLocations = scouting.Result;
+            scouting.Wait();
+            ScoutedLocations = scouting.Result;
             //resync here
             return true;
         }
@@ -155,6 +155,14 @@ public class ArchipelagoHandler
         Mod.PrintToLog(errorMessage);
         Mod.PrintToLog($"Attempting reconnect...");
         return false;
+    }
+
+    // Function to build an array of all location IDs in the game for scouting purposes. 
+    private static long[] BuildLocationIds()
+    {
+        var ids = new List<long>();
+        ids.AddRange(Enumerable.Range(400000, Game.MaxItemID).Select(i => (long)i));
+        return [.. ids];
     }
 
     /* 

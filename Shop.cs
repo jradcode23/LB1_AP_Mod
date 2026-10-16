@@ -1,3 +1,7 @@
+using Reloaded.Memory;
+using Reloaded.Memory.Interfaces;
+using Archipelago.MultiClient.Net.Models;
+
 namespace LB1_AP_Mod;
 
 public class Shop
@@ -80,7 +84,7 @@ public class Shop
             *(SuitUpgradesActive + (i * SuitOffset)) &= unchecked((byte)~(1 << 0));
         }
     }
-    private static readonly int[] shopCharacters =
+    public static readonly int[] shopCharacters =
     [
         2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 22, 24, 29, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 62, 63, 64, 67, 68, 69, 72, 73, 74, 77, 78, 79
     ];
@@ -186,5 +190,53 @@ public class Shop
             return;
         }
         *lockPointer = 1;
+    }
+
+    // This function NOPs the code in the shop that shows character text. We reverse this when outside of the shop cause the code runs in other locations too
+    public static void NOPShopTextCode()
+    {
+        Memory.Instance.SafeWrite(Mod.BaseAddress + 0x2D75A8, [0x90, 0x90]);
+        Memory.Instance.SafeWrite(Mod.BaseAddress + 0x2D75B3, [0x90, 0x90, 0x90]);
+        Memory.Instance.SafeWrite(Mod.BaseAddress + 0xE934C, [0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90]);
+        Memory.Instance.SafeWrite(Mod.BaseAddress + 0xECB67, [0x90, 0x90, 0x90, 0x90, 0x90, 0x90]);
+    }
+
+    public static void RestoreShopTextCode()
+    {
+        Memory.Instance.SafeWrite(Mod.BaseAddress + 0x2D75A8, [0x88, 0x08]);
+        Memory.Instance.SafeWrite(Mod.BaseAddress + 0x2D75B3, [0xC6, 0x00, 0x00]);
+        Memory.Instance.SafeWrite(Mod.BaseAddress + 0xE934C, [0xC6, 0x05, 0xA8, 0xCC, 0x9C, 0x00, 0x00]);
+        Memory.Instance.SafeWrite(Mod.BaseAddress + 0xECB67, [0x88, 0x0D, 0xA8, 0xCC, 0x9C, 0x00]);
+    }
+
+    private static unsafe byte* ShopTextAddress => (byte*)(Mod.BaseAddress + 0x5CCCA8);
+
+    public static unsafe void HandleShopText(int itemSelected)
+    {
+        if (Mod.LB1_AP == null || Mod.LB1_AP.ScoutedLocations == null)
+        {
+            return;
+        }
+
+        long index = ArchipelagoHandler.gameOffset + itemSelected;
+        if (!Mod.LB1_AP.ScoutedLocations.TryGetValue(index, out ScoutedItemInfo? item) || item == null)
+        {
+            Mod.PrintToLog($"Error retrieving scouted location for ID {itemSelected}: index not found");
+            return;
+        }
+
+        try
+        {
+            string message = item.Player + "'s " + item.ItemDisplayName;
+            if (message.Length > 64)
+            {
+                message = message[..64]; // Truncate message if it exceeds selected max shop character length
+            }
+            HintSystem.WriteTextToMemory(message, (uint)ShopTextAddress);
+        }
+        catch (Exception ex)
+        {
+            Mod.PrintToLog($"Error retrieving scouted location for ID {itemSelected}: {ex.Message}");
+        }
     }
 }
