@@ -521,6 +521,7 @@ public class Game
             Mod.LB1_AP!.UpdateBasedOnLocations(0, MaxItemID);
             LevelHandler.UpdateMinikitCounts(false);
             Shop.ResetShopPurchaseLocks();
+            Shop.SetShopPrices(Mod.LB1_AP!.SlotDataInstance!.CheaperShops, false);
             if (Mod.LB1_AP!.SlotDataInstance!.SimpleEpisodeCharacters == 1)
             {
                 CharacterHandler.HandleSpecialCharacters();
@@ -575,6 +576,10 @@ public class Game
                 Mod.GameInstance!.isMenuOpen = false;
                 Mod.GameInstance!.isShopOpen = false;
                 Mod.GameInstance!.isLevelSelectOpen = false;
+            }
+            if (isInShop)
+            {
+                Shop.SetShopPrices(Mod.LB1_AP!.SlotDataInstance!.CheaperShops, true);
             }
             ResetItems();
             if (IsInHub())

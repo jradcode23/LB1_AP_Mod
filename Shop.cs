@@ -239,4 +239,56 @@ public class Shop
             Mod.PrintToLog($"Error retrieving scouted location for ID {itemSelected}: {ex.Message}");
         }
     }
+
+    private static unsafe int* CharacterPriceBaseAddress => *(int**)(Mod.BaseAddress + 0x5C58EC) + (4 / 4);
+    private static unsafe byte* RedBrickPriceBaseAddress => *(byte**)(Mod.BaseAddress + 0x6BE160);
+    private static unsafe int* ExtrasPriceBaseAddress => *(int**)(RedBrickPriceBaseAddress + ExtraOffset) + (0x64 / 4);
+    private static unsafe int* SuitUpgradePriceBaseAddress => *(int**)(RedBrickPriceBaseAddress + SuitUpgradeOffset) + (0x64 / 4);
+
+    private static unsafe void ApplyPriceOperation(int* baseAddress, int count, int gap, int multiplier, bool reverse = false)
+    {
+        if (baseAddress == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            int* current = baseAddress + i * gap;
+            *current = reverse ? (*current * multiplier) : (*current / multiplier);
+            Mod.PrintToLog($"current address: 0x{(uint)current:X}");
+        }
+    }
+
+    private static int ValidateMultiplier(int multiplier)
+    {
+        if (multiplier < 1 || multiplier > 10)
+        {
+            Mod.PrintToLog($"Multiplier Amount is: {multiplier} which is invalid. Changing amount to 1.");
+            return 1;
+        }
+
+        return multiplier;
+    }
+
+    private static unsafe bool AreShopBaseAddressesValid()
+    {
+        return CharacterPriceBaseAddress != null && RedBrickPriceBaseAddress != null && ExtrasPriceBaseAddress != null && SuitUpgradePriceBaseAddress != null;
+    }
+
+    // This helper function is used to reduce the shop prices based on what is stated in the Slot Data
+    public static unsafe void SetShopPrices(int multiplier, bool isReset)
+    {
+        multiplier = ValidateMultiplier(multiplier);
+
+        if (!AreShopBaseAddressesValid())
+        {
+            Mod.PrintToLog("[ShopPrices] One or more shop base addresses are null, cannot set shop prices");
+            return;
+        }
+
+        ApplyPriceOperation(CharacterPriceBaseAddress, shopCharacters.Length, SuitOffset / 4, multiplier, isReset);
+        ApplyPriceOperation(ExtrasPriceBaseAddress, 20, PurchaseLockStride / 4, multiplier, isReset);
+        ApplyPriceOperation(SuitUpgradePriceBaseAddress, 15, PurchaseLockStride / 4, multiplier, isReset);
+    }
 }
