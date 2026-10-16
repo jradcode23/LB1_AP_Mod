@@ -252,6 +252,7 @@ public class CharacterHandler
             {
                 SetSpecialCharacterState(characterBase, RasOffset, RasID);
             }
+            HintSystem.DisplayHushAndRasProgress(hostageCount, minikitCount);
         }
     }
 

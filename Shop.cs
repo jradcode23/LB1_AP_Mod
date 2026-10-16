@@ -256,7 +256,6 @@ public class Shop
         {
             int* current = baseAddress + i * gap;
             *current = reverse ? (*current * multiplier) : (*current / multiplier);
-            Mod.PrintToLog($"current address: 0x{(uint)current:X}");
         }
     }
 

@@ -55,6 +55,7 @@ public class HintSystem
     private static unsafe uint* HintMessageBaseAddress => *(uint**)(Mod.BaseAddress + 0x6957F8);
     private static unsafe uint* BatmanAttackHintAddress => *(uint**)(HintMessageBaseAddress + 0x19C);
     private static unsafe uint* BatmanGrappleHintAddress => *(uint**)(HintMessageBaseAddress + 0x191);
+    private static unsafe uint* Data1Message => *(uint**)(HintMessageBaseAddress + 0x35C);
 
     // Limiting the text to 255 characters. Can potentially handle more, but this should be sufficient and prevent unexpected crashes.
     private const int MaxMessageLength = 255;
@@ -212,18 +213,25 @@ public class HintSystem
         *PausedTextBaseAddress = OriginalPausedAddress;
     }
 
-    // Helper function to write the received Horcrux count to the Player 2 slot name
+    // Helper function to write the received Minikit Count to the pause text on menu
     private static unsafe void DisplayMinikitCount(int count)
     {
         string message = $"Minikits Received: {count}/{Mod.LB1_AP!.SlotDataInstance!.MinikitsToWin}";
         WriteTextToMemory(message, (uint)BatmanGrappleHintAddress);
     }
 
-    // Helper function to write the Levels Beaten to the Player 2 slot name
+    // Helper function to write the Levels Beaten to the pause text on menu
     private static unsafe void DisplayLevelsBeaten(byte count)
     {
         string message = $"Levels Beaten: {count}/{Mod.LB1_AP!.SlotDataInstance!.LevelsToWin}";
         WriteTextToMemory(message, (uint)BatmanGrappleHintAddress);
+    }
+
+    // Helper Function to write the Ras & Hush progress to Data 1 Message
+    public static unsafe void DisplayHushAndRasProgress(int hushProgress, int rasProgress)
+    {
+        string message = $"Hush progress: {hushProgress}/{Mod.LB1_AP!.SlotDataInstance!.HushUnlockCondition}. Ras Progress: {rasProgress}/{Mod.LB1_AP!.SlotDataInstance!.RasUnlockCondition}";
+        WriteTextToMemory(message, (uint)Data1Message);
     }
 
     // New Game text on the main menu. We show connection status here.
