@@ -32,7 +32,7 @@ public class LevelHandler
         0x4B, // V1-3
         0x4E, // V1-4
         0x51, // V1-5
-        0x53, // V2-1
+        0x54, // V2-1
         0x57, // V2-2
         0x5A, // V2-3
         0x5D, // V2-4
