@@ -81,11 +81,15 @@ public class HintSystem
             float* storyNameTimer = (float*)(Mod.BaseAddress + 0x6CB6AC);
             bool hasStoryTimerCleared = *storyNameTimer == 0;
 
+            // This is seems to be greater than 0 when there is a cutscene present
+            uint* inLevelCutscene = (uint*)(Mod.BaseAddress + 0x5C5828);
+            bool haveCutscenesCleared = *inLevelCutscene == 0;
+
             // This byte determines whether enemies can attack you at the beginning of YCBOB
             byte* YcbobEnemiesAddress = (byte*)(Mod.BaseAddress + 0x6CB68C);
             bool enemiesCanAttack = *YcbobEnemiesAddress == 0;
 
-            if (playerControllable && notInShop && notInMenu && notInLevelSelect && hasStoryTimerCleared && enemiesCanAttack)
+            if (playerControllable && notInShop && notInMenu && notInLevelSelect && hasStoryTimerCleared && enemiesCanAttack && haveCutscenesCleared)
             {
                 // verify if there is no message currently being printed or if the timer is maxed (at 7.5 seconds)
                 if (*HintCodeInterpreterAddress == 0 || *HintTimerAddress >= 7.5f)
