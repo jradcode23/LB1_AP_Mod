@@ -64,7 +64,8 @@ public class Shop
         *(SuitUpgradesActive + (upgradeNumber * SuitOffset)) |= 1 << 0;
     }
 
-    private static readonly byte[] mask = [0x01, 0x00, 0x00, 0x00];
+    // To note, the extra bits after are to consider suit upgrades unlocked or not
+    private static readonly byte[] mask = [0x01, 0x00, 0x00, 0x00, 0x00, 0x00];
 
     public unsafe static void ResetRedBricks()
     {
