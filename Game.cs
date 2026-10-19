@@ -37,6 +37,8 @@ public class Game
         Memory.Instance.SafeWrite(Mod.BaseAddress + 0xDC040, [0xDD, 0xD8, 0x90, 0x90, 0x90, 0x90]);
         // NOP the code that moves the in level stud total to be moved into global total
         Memory.Instance.SafeWrite(Mod.BaseAddress + 0x24D3B3, [0x90, 0x90, 0x90, 0x90, 0x90, 0x90]);
+        // NOP the code that turns the Hint Code light blue
+        Memory.Instance.SafeWrite(Mod.BaseAddress + 0x1D4E43, [0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90]);
     }
 
     // Used to check if the game menu is loaded before connecting and trying to set up hooks
@@ -286,6 +288,7 @@ public class Game
             "popfd",
         };
         _asmHooks.Add(hooks.CreateAsmHook(handleInterruptedMessageHook, (int)(Mod.BaseAddress + 0x1D4E0E), AsmHookBehaviour.ExecuteFirst).Activate());
+        _asmHooks.Add(hooks.CreateAsmHook(handleInterruptedMessageHook, (int)(Mod.BaseAddress + 0x1D4E50), AsmHookBehaviour.ExecuteFirst).Activate());
 
         string[] collectStudHook =
         {
