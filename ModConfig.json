@@ -16,6 +16,6 @@
   "IsUniversalMod": false,
   "ModDependencies": [ "reloaded.sharedlib.hooks" ],
   "OptionalDependencies": [],
-  "SupportedAppId": ["legobatman.exe"],
+  "SupportedAppId": ["legobatman.exe", "legobatman.exe_dup"],
   "ProjectUrl": "https://github.com/jradcode23/LB1_AP_Mod"
 }

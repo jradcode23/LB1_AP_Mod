@@ -1,4 +1,6 @@
-﻿using Reloaded.Hooks.ReloadedII.Interfaces;
+﻿using Reloaded.Memory;
+using Reloaded.Memory.Interfaces;
+using Reloaded.Hooks.ReloadedII.Interfaces;
 using Reloaded.Mod.Interfaces;
 using LB1_AP_Mod.Template;
 using LB1_AP_Mod.Configuration;
@@ -46,7 +48,11 @@ public class Mod : ModBase // <= Do not Remove.
     // private readonly IModConfig _modConfig;
     public static ArchipelagoHandler? LB1_AP;
     public static Game? GameInstance;
-    public static uint BaseAddress;
+    public static uint BaseAddress { get; private set; }
+    // public static uint Offset { get; private set; } = 0;
+    // // These are the build timestampes from the COFF file. We use this to determine if the user is playing the steam/gog version.
+    // private const uint GogTimeStamp = 1220609213;
+    // private const uint SteamTimeStamp = 1751626061;
 
     public Mod(ModContext context)
     {
@@ -64,6 +70,22 @@ public class Mod : ModBase // <= Do not Remove.
 
         GameInstance = new Game();
         BaseAddress = (uint)Process.GetCurrentProcess().MainModule!.BaseAddress;
+        // uint address = BaseAddress + 0x110;
+        // uint timestamp = Memory.Instance.Read<uint>(address);
+        // PrintToLog($"Exe Build Timestamp: {timestamp}");
+        // if (timestamp == GogTimeStamp)
+        // {
+        //     Offset = 0x1000;
+        //     PrintToLog("Playing on the Gog Verion");
+        // }
+        // else if (timestamp == SteamTimeStamp)
+        // {
+        //     PrintToLog("Playing on the Steam Verion");
+        // }
+        // else
+        // {
+        //     PrintToLog("We do not know what version of the game you are playing. Unexpected Behavior will occur");
+        // }
 
         if (Configuration == null)
         {
