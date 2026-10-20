@@ -262,8 +262,6 @@ public class CharacterHandler
     private static readonly ushort[] CarCharIDs = [0x81, 0x82, 0x119, 0x11A, 0x11F, 0x121, 0x110, 0xC6, 0xD2, 0xCD, 0x116, 0x11B];
     private static readonly ushort[] BoatCharIDs = [0x84, 0xBD, 0x010D, 0xD1, 0x9E, 0xCE, 0xBA, 0xC0, 0x11D, 0x11E];
     private static readonly ushort[] AirCharIDs = [0x83, 0xC4, 0x101, 0x112, 0x10F, 0xC1, 0xD0, 0x118, 0x11C, 0x122];
-    private const ushort RobinCharIDConst = 0x01;
-    private const ushort ScientistCharIDConst = 0x2B;
     private static unsafe ushort* Player1CharacterSelected => (ushort*)(Mod.BaseAddress + 0x6CA814);
     private static unsafe ushort* Player2CharacterSelected => (ushort*)(Mod.BaseAddress + 0x6CA816);
     private static unsafe void UpdateVehicleLevelSelector(int archiIDStart, int archiIDEnd, ushort[] charIDs)
@@ -318,21 +316,154 @@ public class CharacterHandler
             UpdateVehicleLevelSelector(70, 79, AirCharIDs);
             return;
         }
-
         // the Game doesn't alays select the scientist or a glide character even if they are unlocked. 
         // This first section is to move the player2 character to select scientist if they have scientist and not tech suit.
         // We will have to expect the player to select the glide character
-        bool isScientistUnlocked = Mod.LB1_AP!.CountItemsReceivedWithId(12) > 0;
-        bool isTechSuitUnlocked = Mod.LB1_AP!.CountItemsReceivedWithId(87) > 0;
-        *Player1CharacterSelected = 0x0;
 
-        if (isScientistUnlocked && !isTechSuitUnlocked)
+        *Player1CharacterSelected = 0x0;
+        *Player2CharacterSelected = 0x1;
+    }
+
+    private static unsafe ushort* LevelBoss => (ushort*)(Mod.BaseAddress + 0x5CA018);
+    private static readonly int[] GlideCharacterIDs = [24, 25, 28];
+    private static readonly int[] TechCharacterIDs = [12];
+    private static readonly int[] DiveCharacterIDs = [23];
+    private const int GlideSuitID = 82;
+    private const int TechSuitID = 87;
+    private const int DiveSuitID = 86;
+
+    private static bool HasAnyUnlocked(int[] characterIDs)
+    {
+        foreach (int characterID in characterIDs)
         {
-            *Player2CharacterSelected = ScientistCharIDConst;
+            if (CheckUnlock(characterID))
+            {
+                return true;
+            }
         }
-        else
+
+        return false;
+    }
+
+    private static unsafe bool TryAddUnlockedCharacter(ushort* address, int[] characterIDs, ref bool hasCharacter)
+    {
+        while (*address != 0xFFFF || address > (ushort*)(Mod.BaseAddress + 0x5CA0D4))
         {
-            *Player2CharacterSelected = RobinCharIDConst;
+            address += 2; // If we need to change multiple characters, we'll need to increase the address by 2
+        }
+
+        if (*(address - 1) != 1)
+        {
+            *address = 1; // character ID must have a 1 before it in order for it to be selected
+        }
+        foreach (int characterID in characterIDs)
+        {
+            if (!CheckUnlock(characterID))
+            {
+                continue;
+            }
+
+            *address = (ushort)GetCharacterByteOffset(characterID);
+            *(address + 2) = 0xFFFF;
+            hasCharacter = true;
+            return true;
+        }
+
+        return false;
+    }
+
+    // This function is to make sure that the game has selected a glide/tech/dive character for freeplay if one is unlocked
+    public static unsafe void HandleFreeplayCharacters()
+    {
+        bool hasGlideChar = HasAnyUnlocked(GlideCharacterIDs);
+        bool hasTechChar = HasAnyUnlocked(TechCharacterIDs);
+        bool hasDiveChar = HasAnyUnlocked(DiveCharacterIDs);
+
+        // If the player doesn't have any characters unlocked, return
+        if (!hasGlideChar && !hasTechChar && !hasDiveChar)
+        {
+            Mod.PrintToLog("Player does not have any overlapping suits/characters. Returning");
+            return;
+        }
+
+        hasGlideChar = CheckUnlock(GlideSuitID);
+        hasTechChar = CheckUnlock(TechSuitID);
+        hasDiveChar = CheckUnlock(DiveSuitID);
+
+        // If the player has all the suits, return;
+        if (hasGlideChar && hasTechChar && hasDiveChar)
+        {
+            Mod.PrintToLog("Player has all suits unlocked returning;");
+            return;
+        }
+
+        // This loop goes through the Freeplay Character selected array to determine if a Glide/Tech/Dive character has been given. If one hasn't, we add one of the characters needed at the end.
+        // There shouldn't be a risk for array out of index cause the memory region seems to be 188 bytes long
+        while (!hasGlideChar || !hasTechChar || !hasDiveChar)
+        {
+            for (int i = 0; i < 94; i++) // the array section seems to be 188 bytes (94 ushorts) long, we should never get to the end though
+            {
+                ushort* address = LevelBoss + i * 2; // multiplying by 2 for ushort pointer arithmetic instead of 4
+                ushort characterValue = *address;
+
+                if (characterValue == 0xFFFF) // The ending of the array is always 0xFFFF, though it doesn't always clear out the old value
+                {
+                    Mod.PrintToLog("Reached end of freeplay character array");
+                    if (!hasGlideChar && TryAddUnlockedCharacter(address, GlideCharacterIDs, ref hasGlideChar))
+                    {
+                        Mod.PrintToLog("Giving Glide Character if unlocked");
+                        continue;
+                    }
+
+                    if (!hasTechChar && TryAddUnlockedCharacter(address, TechCharacterIDs, ref hasTechChar))
+                    {
+                        Mod.PrintToLog("Giving Tech Character if unlocked");
+                        continue;
+                    }
+
+                    if (!hasDiveChar && TryAddUnlockedCharacter(address, DiveCharacterIDs, ref hasDiveChar))
+                    {
+                        Mod.PrintToLog("Giving Dive Character if unlocked");
+                        continue;
+                    }
+
+                    break;
+                }
+
+                int archiID = GetCharacterArchiID(characterValue);
+                if (archiID == -1)
+                {
+                    continue;
+                }
+
+                if (GlideCharacterIDs.Contains(archiID) && CheckUnlock(archiID))
+                {
+                    hasGlideChar = true;
+                }
+
+                if (DiveCharacterIDs.Contains(archiID) && CheckUnlock(archiID))
+                {
+                    hasDiveChar = true;
+                }
+
+                if (TechCharacterIDs.Contains(archiID) && CheckUnlock(archiID))
+                {
+                    hasTechChar = true;
+                }
+
+                if (hasGlideChar && hasTechChar && hasDiveChar)
+                {
+                    break;
+                }
+            }
+
+            break;
         }
     }
+
+    private static bool CheckUnlock(int ID)
+    {
+        return Mod.LB1_AP!.CountItemsReceivedWithId(ID) > 0;
+    }
+
 }

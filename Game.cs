@@ -136,6 +136,7 @@ public class Game
     private static IReverseWrapper<ShopItemSelected> _reverseWrapOnShopItemSelected = default!;
     private static IReverseWrapper<OpenShopSubMenu> _reverseWrapOnOpenShopSubMenu = default!;
     private static IReverseWrapper<CloseShopSubMenu> _reverseWrapOnCloseShopSubMenu = default!;
+    private static IReverseWrapper<SelectFreeplayCharacters> _reverserWrapOnSelectFreeplayCharacters = default!;
 
     // Modifying the associated assembly of our game to call our functions
     // TODO: Future proof this from game updates by implementing signature scanning
@@ -335,6 +336,17 @@ public class Game
             "popfd",
         };
         _asmHooks.Add(hooks.CreateAsmHook(closeShopSubMenuHook, (int)(Mod.BaseAddress + 0xECB13), AsmHookBehaviour.ExecuteFirst).Activate());
+
+        string[] freeplayCharacterHook =
+        {
+            "use32",
+            "pushfd",
+            "pushad",
+            $"{hooks.Utilities.GetAbsoluteCallMnemonics(OnSelectFreeplayCharacters, out _reverserWrapOnSelectFreeplayCharacters)}",
+            "popad",
+            "popfd",
+        };
+        _asmHooks.Add(hooks.CreateAsmHook(freeplayCharacterHook, (int)(Mod.BaseAddress + 0xA6AB3), AsmHookBehaviour.ExecuteFirst).Activate());
     }
 
     [Function([FunctionAttribute.Register.eax, FunctionAttribute.Register.edx],
@@ -784,6 +796,13 @@ public class Game
     {
         Mod.PrintToLog("Shop Sub Menu closed. Restoring code");
         Shop.RestoreShopTextCode();
+    }
+
+    [Function(CallingConventions.Fastcall)]
+    private delegate void SelectFreeplayCharacters();
+    private static void OnSelectFreeplayCharacters()
+    {
+        CharacterHandler.HandleFreeplayCharacters();
     }
 
     // Helper function to report an Archi location as completed.
