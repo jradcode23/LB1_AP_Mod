@@ -352,9 +352,11 @@ public class CharacterHandler
             address += 2; // If we need to change multiple characters, we'll need to increase the address by 2
         }
 
-        if (*(address - 1) != 1)
+        // character ID must have a 1 before & after it in order for it to be selected
+        if (*(address + 1) != 1 || *(address - 1) != 1)
         {
-            *address = 1; // character ID must have a 1 before it in order for it to be selected
+            *(address - 1) = 1;
+            *(address + 1) = 1;
         }
         foreach (int characterID in characterIDs)
         {
@@ -362,7 +364,6 @@ public class CharacterHandler
             {
                 continue;
             }
-
             *address = (ushort)GetCharacterByteOffset(characterID);
             *(address + 2) = 0xFFFF;
             hasCharacter = true;
@@ -408,7 +409,6 @@ public class CharacterHandler
 
                 if (characterValue == 0xFFFF) // The ending of the array is always 0xFFFF, though it doesn't always clear out the old value
                 {
-                    Mod.PrintToLog("Reached end of freeplay character array");
                     if (!hasGlideChar && TryAddUnlockedCharacter(address, GlideCharacterIDs, ref hasGlideChar))
                     {
                         Mod.PrintToLog("Giving Glide Character if unlocked");

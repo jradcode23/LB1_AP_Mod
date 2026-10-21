@@ -346,7 +346,7 @@ public class Game
             "popad",
             "popfd",
         };
-        _asmHooks.Add(hooks.CreateAsmHook(freeplayCharacterHook, (int)(Mod.BaseAddress + 0xA6AB3), AsmHookBehaviour.ExecuteFirst).Activate());
+        _asmHooks.Add(hooks.CreateAsmHook(freeplayCharacterHook, (int)(Mod.BaseAddress + 0xA6A85), AsmHookBehaviour.ExecuteFirst).Activate());
     }
 
     [Function([FunctionAttribute.Register.eax, FunctionAttribute.Register.edx],
