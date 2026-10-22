@@ -88,6 +88,7 @@ public class Game
     }
 
     private const int SuitOffset = 80;
+    public const int PurpleStudOffset = 90;
     public const int MinikitOffset = 100;
     private const int HostageOffset = 400;
     public const int LevelOffset = 425;
@@ -101,7 +102,7 @@ public class Game
             case < SuitOffset: // Handle Character
                 CharacterHandler.UnlockCharacter(itemID);
                 break;
-            case < MinikitOffset: // Handle Suit Unlock
+            case < PurpleStudOffset: // Handle Suit Unlock
                 Suits.UnlockSuit(itemID - SuitOffset);
                 break;
             case < HostageOffset: // Handle Minikit

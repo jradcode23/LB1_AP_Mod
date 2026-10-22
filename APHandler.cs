@@ -33,7 +33,7 @@ public class ArchipelagoHandler
 
     private Thread? _locationsThread;
     private Thread? _hintThread;
-    // private Thread? _queuedItemsThread;
+    private Thread? _queuedItemsThread;
 
     public ArchipelagoHandler(string server, int port, string slot, string password)
     {
@@ -172,66 +172,42 @@ public class ArchipelagoHandler
     */
     private void ItemReceived(ReceivedItemsHelper helper)
     {
-        // while (helper.Any())
-        // {
-        // var item = helper.DequeueItem();
-        // int gameID = (int)item.ItemId - gameOffset;
-        //     bool prevInShop = false, prevInLevelSelect = false;
+        while (helper.Any())
+        {
+            var item = helper.DequeueItem();
+            int gameID = (int)item.ItemId - gameOffset;
+            bool InLevelSelect = false;
 
-        // Verify if the player is in a shop or in the level selector since we give them certain items instantly if they are
-        // if (Mod.GameInstance != null)
-        // {
-        //     lock (Mod.GameInstance.StateLock)
-        //     {
-        //         prevInShop = Mod.GameInstance.PrevInShop;
-        //         prevInLevelSelect = Mod.GameInstance.PrevInLevelSelect;
-        //     }
-        // }
+            // Verify if the player isthe level selector since we give them certain items instantly if they are
+            if (Mod.GameInstance != null)
+            {
+                lock (Mod.GameInstance.StateLock)
+                {
+                    InLevelSelect = Mod.GameInstance.isLevelSelectOpen;
+                }
+            }
 
-        // if (Mod.GameInstance != null && prevInShop && gameID != 699)
-        // {
-        //     // Token or red brick purchasable
-        //     if ((gameID >= 900 && gameID <= 935) || (gameID >= 213 && gameID <= 425))
-        //     {
-        //         Game.ManageItem(gameID);
-        //     }
-        //     return;
-        // }
-        // If in level select, we give them any item but purple stud
-        // if (Mod.GameInstance != null && prevInLevelSelect && gameID != 699)
-        // {
-        //     Game.ManageItem(gameID);
-        //     return;
-        // }
-        // If the player is controllable, we give them purple studs, any spells/abilities, and Horcruxes
-        // if (Mod.GameInstance != null && Game.IsPlayerControllable())
-        // {
-        //     // Handle Spells/Abilities
-        //     if (gameID >= Game.SpellPurchOffset)
-        //     {
-        //         Game.ManageItem(gameID);
-        //         int mapID;
-        //         lock (Mod.GameInstance!.MapLock)
-        //         {
-        //             mapID = Mod.GameInstance!.MapID;
-        //         }
-        //         SpellHandler.SpellMapLogic(mapID);
-        //         return;
-        //     }
-        // Handle Purple Studs
-        // if (gameID == 699)
-        // {
-        //     HubHandler.HandlePurpleStud();
-        //     return;
-        // }
-        // }
-        // Handle Purple Stud if player isn't controllable (could be in the menu)
-        // if (Mod.GameInstance != null && !Game.IsPlayerControllable() && gameID == 699)
-        // {
-        //     _queuedItems.Enqueue(gameID);
-        //     return;
-        // }
-        // }
+            // If in level select, we give them characters & Suit
+            if (Mod.GameInstance != null && InLevelSelect && gameID < Game.PurpleStudOffset)
+            {
+                Game.ManageItem(gameID);
+                return;
+            }
+
+            //Handle Purple Stud if player isn't controllable (could be in the menu)
+            if (Mod.GameInstance != null && !Game.IsPlayerControllable() && gameID == Game.PurpleStudOffset)
+            {
+                _queuedItems.Enqueue(gameID);
+                return;
+            }
+            //Handle Purple Studs
+            if (gameID == Game.PurpleStudOffset)
+            {
+                Shop.HandlePurpleStud();
+                return;
+            }
+
+        }
     }
 
     // Once Goal is completed, this function is called
@@ -300,44 +276,45 @@ public class ArchipelagoHandler
             _hintThread.Start();
         }
 
-        // if (_queuedItemsThread == null || !_queuedItemsThread.IsAlive)
-        // {
-        //     _queuedItemsThread = new Thread(HandleQueuedItems)
-        //     {
-        //         IsBackground = true
-        //     };
-        //     _queuedItemsThread.Start();
-        // }
+        if (_queuedItemsThread == null || !_queuedItemsThread.IsAlive)
+        {
+            _queuedItemsThread = new Thread(HandleQueuedItems)
+            {
+                IsBackground = true,
+                Name = "PurpleStudThread"
+            };
+            _queuedItemsThread.Start();
+        }
     }
 
     // If there are instantenous items (like purple studs and in the future traps) that we queued up because the player wasn't controllable, this is a separate thread that waits until the player is controllable to pass them the item. 
     public void HandleQueuedItems()
     {
-        // while (true)
-        // {
-        //     if (_queuedItems.TryPeek(out var itemId))
-        //     {
-        //         if (Mod.GameInstance != null && Game.IsPlayerControllable())
-        //         {
-        //             if (_queuedItems.TryDequeue(out itemId))
-        //             {
-        //                 // Console.WriteLine($"Handling queued item with game ID {itemId}");
-        //                 if (itemId == 699)
-        //                 {
-        //                     HubHandler.HandlePurpleStud();
-        //                 }
-        //             }
-        //         }
-        //         else
-        //         {
-        //             Thread.Sleep(100);
-        //         }
-        //     }
-        //     else
-        //     {
-        //         Thread.Sleep(100);
-        //     }
-        // }
+        while (true)
+        {
+            if (_queuedItems.TryPeek(out var itemId))
+            {
+                if (Mod.GameInstance != null && Game.IsPlayerControllable())
+                {
+                    if (_queuedItems.TryDequeue(out itemId))
+                    {
+                        // Console.WriteLine($"Handling queued item with game ID {itemId}");
+                        if (itemId == 90)
+                        {
+                            Shop.HandlePurpleStud();
+                        }
+                    }
+                }
+                else
+                {
+                    Thread.Sleep(100);
+                }
+            }
+            else
+            {
+                Thread.Sleep(100);
+            }
+        }
     }
 
     // Helper function to verify if a location has already been completed (includes if it was collected by server)

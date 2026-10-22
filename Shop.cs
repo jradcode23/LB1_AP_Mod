@@ -291,4 +291,36 @@ public class Shop
         ApplyPriceOperation(ExtrasPriceBaseAddress, 20, PurchaseLockStride / 4, multiplier, isReset);
         ApplyPriceOperation(SuitUpgradePriceBaseAddress, 15, PurchaseLockStride / 4, multiplier, isReset);
     }
+
+    private static unsafe uint* StudTotalBaseAddress => *(uint**)(Mod.BaseAddress + 0x5C59CC) + (0x7BD0 / 4);
+    private static unsafe byte* PurpleCountAddress => (byte*)StudTotalBaseAddress + 0x20;
+
+    // This is a helper function to handle when the player receives a purple stud.
+    public static unsafe void HandlePurpleStud()
+    {
+        // Because we switch between game states, verify how many purple studs the player has received
+        int purpleStudCount = Mod.LB1_AP!.CountItemsReceivedWithId(Game.PurpleStudOffset);
+
+        if (purpleStudCount == 0)
+        {
+            return;
+        }
+
+        if (StudTotalBaseAddress == null || PurpleCountAddress == null)
+        {
+            Mod.PrintToLog($"Can't Update Stud Total, null pointer at 0x{(nuint)StudTotalBaseAddress:X}");
+            return;
+        }
+
+        /* 
+        In Purple Count Address, I write to the save file how many purple studs we have given the player. 
+        This is so we don't duplicate any or miss giving them any.
+        We then verify here if they are missing any in their stud total and add 10k if so
+        */
+        while (*PurpleCountAddress < purpleStudCount)
+        {
+            *PurpleCountAddress += 1;
+            *StudTotalBaseAddress += 10000;
+        }
+    }
 }
