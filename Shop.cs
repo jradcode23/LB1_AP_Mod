@@ -229,9 +229,10 @@ public class Shop
         try
         {
             string message = item.Player + "'s " + item.ItemDisplayName;
-            if (message.Length > 64)
+            // Counted in UTF-8 bytes: the slot holds bytes, and an accent takes two
+            while (System.Text.Encoding.UTF8.GetByteCount(message) > 64)
             {
-                message = message[..64]; // Truncate message if it exceeds selected max shop character length
+                message = message[..^1]; // Truncate message if it exceeds selected max shop character length
             }
             HintSystem.WriteTextToMemory(message, (uint)ShopTextAddress);
         }

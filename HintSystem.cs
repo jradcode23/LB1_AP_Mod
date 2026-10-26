@@ -162,18 +162,22 @@ public class HintSystem
         }
     }
 
-    // Helper function to convert a string to ASCII encoded bytes
+    // Helper function to convert a string to UTF-8 encoded bytes
     public static void WriteTextToMemory(string newText, uint memoryAddress)
     {
 
-        // ASCII encode and null-terminate
+        // The game draws UTF-8: accents in player and item names display as they are
         var bytes = System.Text.Encoding.ASCII.GetBytes(newText + '\0');
 
         // Ensure that our message isn't too large to print.
         if (bytes.Length > MaxMessageLength)
         {
-            var full = new byte[MaxMessageLength];
-            Array.Copy(bytes, full, MaxMessageLength);
+            // keep the terminator, and don't cut a UTF-8 character in half
+            int cut = MaxMessageLength - 1;
+            while (cut > 0 && (bytes[cut] & 0xC0) == 0x80)
+                cut--;
+            var full = new byte[cut + 1];
+            Array.Copy(bytes, full, cut);
             bytes = full;
         }
 
