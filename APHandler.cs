@@ -383,8 +383,7 @@ public class ArchipelagoHandler
         {
             var startId = start + gameOffset;
             var endId = end + gameOffset;
-            return Session.Locations.AllLocationsChecked.Concat(_locationsToCheck).Distinct()
-                .Count(location => location >= startId && location <= endId);
+            return Session.Locations.AllLocationsChecked.Count(location => location >= startId && location <= endId);
         }
     }
 
