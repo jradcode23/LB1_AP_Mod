@@ -4,9 +4,6 @@ using Reloaded.Hooks.Definitions;
 using Reloaded.Hooks.Definitions.Enums;
 using Reloaded.Hooks.Definitions.X86;
 using System.Numerics;
-using LB1_AP_Mod.Configuration;
-using LB1_AP_Mod;
-using System.IO.Pipes;
 
 namespace LB1_AP_Mod;
 
@@ -18,9 +15,11 @@ public class Game
     public bool isMenuOpen = false;
     public bool isShopOpen = false;
     public bool isLevelSelectOpen = false;
-    // After Connecting, this function reads initial game variables and NOPs code that we don't want running
+
+    // After Connected, this function reads initial game variables and NOPs code that we don't want running
     public static unsafe void ModifyInstructions()
     {
+        // Set the Initial Map ID
         ushort* mapPointer = (ushort*)(Mod.BaseAddress + 0x6CA8C4);
         if (mapPointer == null)
         {
@@ -57,6 +56,7 @@ public class Game
         }
     }
 
+    // This address seems to be 1 when the player is controllable and 0 when not (with few exceptions like menu). This function checks that variable and returns true/false
     public static unsafe bool IsPlayerControllable()
     {
         byte* playerFlagBase = *(byte**)(Mod.BaseAddress + 0x6B364C);
@@ -67,7 +67,7 @@ public class Game
         return *(playerFlagBase + 0x258) == 1;
     }
 
-    // Helper Function to check if menu is loaded or player is controllable
+    // This helper Function checks if menu is loaded or player is controllable so we can connect and overwrite the assembly without the game reverting it
     public static unsafe bool AreGameFilesLoaded()
     {
         try
@@ -87,6 +87,7 @@ public class Game
         }
     }
 
+    // Constants for Archi ID Offsets
     private const int SuitOffset = 80;
     public const int PurpleStudOffset = 90;
     public const int MinikitOffset = 100;
@@ -95,6 +96,8 @@ public class Game
     private const int TrueSuperHeroOffset = 455;
     public const int RedBrickOffset = 485;
     public const int MaxItemID = 521;
+
+    // This is our general function that handles items. The way the archi is set up is we switch the game flags between the "Location" state and the "item" state depending on what the player is doing.
     public static void ManageItem(int itemID)
     {
         switch (itemID)
@@ -122,6 +125,7 @@ public class Game
         }
     }
 
+    // These are the reverse wrapper for the reloaded hooks. To make modding the game easier, we insert our functions at specific parts of the game's assembly and perform our own functions.
     public static List<IAsmHook> _asmHooks = [];
     private static IReverseWrapper<IncreaseMinikitCount> _reverseWrapOnIncreaseMinikitCount = default!;
     private static IReverseWrapper<CharacterUnlock> _reverseWrapOnCharacterUnlock = default!;
@@ -141,7 +145,7 @@ public class Game
     private static IReverseWrapper<CloseShopSubMenu> _reverseWrapOnCloseShopSubMenu = default!;
     private static IReverseWrapper<SelectFreeplayCharacters> _reverserWrapOnSelectFreeplayCharacters = default!;
 
-    // Modifying the associated assembly of our game to call our functions
+    // This section is where we write the assembly code that is going to get injected.
     // TODO: Future proof this from game updates by implementing signature scanning
     public void SetupHooks(IReloadedHooks hooks)
     {
@@ -268,8 +272,7 @@ public class Game
             "pop ebx",
             "popfd",
         };
-        // Change Suit that the signal is showing in a level
-        _asmHooks.Add(hooks.CreateAsmHook(changeSuitSignalHook, (int)(Mod.BaseAddress + 0xF0818), AsmHookBehaviour.ExecuteFirst).Activate());
+        _asmHooks.Add(hooks.CreateAsmHook(changeSuitSignalHook, (int)(Mod.BaseAddress + 0xF0818), AsmHookBehaviour.ExecuteFirst).Activate()); // Change Suit that the signal is showing in a level
 
         string[] purchaseRedBrick =
         {
@@ -291,8 +294,8 @@ public class Game
             "popad",
             "popfd",
         };
-        _asmHooks.Add(hooks.CreateAsmHook(handleInterruptedMessageHook, (int)(Mod.BaseAddress + 0x1D4E0E), AsmHookBehaviour.ExecuteFirst).Activate());
-        _asmHooks.Add(hooks.CreateAsmHook(handleInterruptedMessageHook, (int)(Mod.BaseAddress + 0x1D4E50), AsmHookBehaviour.ExecuteFirst).Activate());
+        _asmHooks.Add(hooks.CreateAsmHook(handleInterruptedMessageHook, (int)(Mod.BaseAddress + 0x1D4E0E), AsmHookBehaviour.ExecuteFirst).Activate()); // Max hint timer
+        _asmHooks.Add(hooks.CreateAsmHook(handleInterruptedMessageHook, (int)(Mod.BaseAddress + 0x1D4E50), AsmHookBehaviour.ExecuteFirst).Activate()); // Walk through Door
 
         string[] collectStudHook =
         {
@@ -352,6 +355,9 @@ public class Game
         _asmHooks.Add(hooks.CreateAsmHook(freeplayCharacterHook, (int)(Mod.BaseAddress + 0xA6AB3), AsmHookBehaviour.ExecuteFirst).Activate());
     }
 
+    // This function is what we want to happen when the in level minikit count increases.
+    // We will read the minikit code that the game stored and send the location
+    // eax is the minikit count and edx is the Map ID it was collected in.
     [Function([FunctionAttribute.Register.eax, FunctionAttribute.Register.edx],
     FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
     public delegate void IncreaseMinikitCount(uint eax, uint edx);
@@ -365,8 +371,10 @@ public class Game
         ReadMinikitValue(minikitCount, mapId);
     }
 
+    // Start of the minikit code array in memory
     private static unsafe byte* MinikitCodeBaseAddress => (byte*)(Mod.BaseAddress + 0x6D10E0);
 
+    // Function to read the minikit array and send the associated check.
     private static unsafe void ReadMinikitValue(uint minikitNum, ushort mapId)
     {
         if (MinikitCodeBaseAddress == null)
@@ -374,12 +382,11 @@ public class Game
             Mod.PrintToLog("Please report to a Dev. Minikit Address is Null");
             return;
         }
-        byte* mostRecentMinikit = MinikitCodeBaseAddress + (minikitNum * 0xC);
+        byte* mostRecentMinikit = MinikitCodeBaseAddress + (minikitNum * 0xC); // Each code and Map ID is 0xC bytes long
         Mod.PrintToLog($"MostRecentMiniki: 0x{(uint)mostRecentMinikit:X}");
 
-
         string currentCode = new((sbyte*)mostRecentMinikit); // Read the current message from memory
-        int MaxLength = 8;
+        int MaxLength = 8; // Each minikit code is max 8 bytes
 
         if (string.IsNullOrEmpty(currentCode))
         {
@@ -392,16 +399,19 @@ public class Game
             Mod.PrintToLog("Unexpected Behavior, code exceeded max length");
             return;
         }
-        Mod.PrintToLog($"Minikit Code: {currentCode}. Map ID is: 0x{mapId:X}.");
 
+        Mod.PrintToLog($"Minikit Code: {currentCode}. Map ID is: 0x{mapId:X}.");
+        // Lookup minikit code and report the location to Archi
         if (MinikitHandler.kitTable.TryGetValue((mapId, currentCode), out int kitId))
         {
             CheckAndReportLocation(kitId + MinikitOffset);
             return;
         }
+
         Mod.PrintToLog($"Minikit Code not recognized: {currentCode}. Map ID is: 0x{mapId:X}.");
     }
 
+    // Since the game doesn't, we clear out the minikit codes when returning to hub
     private static unsafe void ClearMinikitCodes()
     {
         if (MinikitCodeBaseAddress == null)
@@ -417,9 +427,10 @@ public class Game
         }
     }
 
+    // This function is what we want to happen when the player purchases a character.
+    // The function converts the character offset (edi) to archi ID and reports the location to archi
     [Function([FunctionAttribute.Register.edi],
     FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
-
     public delegate void CharacterUnlock(int edi);
 
     private static void OnCharacterUnlock(int edi)
@@ -437,87 +448,118 @@ public class Game
         }
     }
 
+    // Helper function to verify if the player is in the Hub or in a level based on map ID
+    private static readonly ushort[] HubMapIDs = [0x6, 0x9, 0xA, 0x5];
     public static bool IsInHub()
     {
         return HubMapIDs.Contains(Mod.GameInstance!.MapID);
     }
 
+    // Helper function to update Game Flags to Items/Locations when in hub
+    private static void UpdateHubItemsAndLocations()
+    {
+        Mod.LB1_AP!.UpdateBasedOnItems(0, SuitOffset - 1);
+        Mod.LB1_AP!.UpdateBasedOnLocations(SuitOffset, MinikitOffset - 1);
+        LevelHandler.UpdateMinikitCounts(true);
+        Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, LevelOffset - 1);
+        Mod.LB1_AP!.UpdateBasedOnItems(LevelOffset, TrueSuperHeroOffset - 1);
+        Mod.LB1_AP!.UpdateBasedOnLocations(TrueSuperHeroOffset, RedBrickOffset - 1);
+        Mod.LB1_AP!.UpdateBasedOnItems(RedBrickOffset, MaxItemID);
+    }
+
+    // Helper function to update Game Flags to Items/Locations when in level
+    private static void UpdateLevelItemsAndLocations()
+    {
+        Mod.LB1_AP!.UpdateBasedOnItems(0, MinikitOffset - 1);
+        LevelHandler.UpdateMinikitCounts(false);
+        Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, RedBrickOffset - 1);
+        Mod.LB1_AP!.UpdateBasedOnItems(RedBrickOffset, MaxItemID);
+    }
+
+    // Since the archi switches the game flags between location & item states, we have a custom function that runs when a map changes.
+    // ecx is the new map that the player is going to.
     [Function([FunctionAttribute.Register.ecx],
     FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
     public delegate void UpdateMap(ushort ecx);
     private static void OnMapUpdate(ushort ecx)
     {
-        if (Mod.GameInstance!.MapID == 0x0) // Coming from the menu
+        // If coming from menu remove our connection status message
+        if (Mod.GameInstance!.MapID == 0x0)
         {
             HintSystem.RestoreNewGameText();
         }
+
+        // If the player enters the trophy room, check win con
+        if (Mod.GameInstance!.MapID == 0x6)
+        {
+            CheckWinCon();
+        }
+
+        // Update Map ID
         Mod.PrintToLog($"Map ID Updated to: {ecx}");
         Mod.GameInstance!.MapID = ecx;
 
-        if (ecx == 0x0) // Going to menu
+        // If going to menu, display connection status
+        if (ecx == 0x0)
         {
             string message = ArchipelagoHandler.IsConnected ? "Connected. Ready to Play" : "Connecting. Please wait";
             HintSystem.UpdateConnectionStatusText(message);
         }
 
+        // Check to see if the map we are on is the end of level status screen
+        // If so, send the level completed location to archi
         int levelCompletedID = LevelHandler.CheckStatusMap(ecx);
         if (levelCompletedID != -1)
         {
             CheckAndReportLocation(levelCompletedID + LevelOffset);
             CharacterHandler.SendVanillaCharacters(levelCompletedID);
         }
-        ResetItems();
+
+        // Report the Map ID to Data storage for Auto Map Tracking
         Mod.LB1_AP!.SendMapID(Mod.GameInstance!.MapID);
-        if (Mod.GameInstance!.MapID == 0x6)
-        {
-            CheckWinCon();
-        }
-        // TODO: This code may be a little repetive right now with the subsequent functions, once other items are implemented, can see what we want to do
+
+        // Handle Item & location state for the new map.
+        ResetItems();
         if (IsInHub())
         {
             ClearMinikitCodes();
-            Mod.LB1_AP!.UpdateBasedOnItems(0, SuitOffset - 1);
-            Mod.LB1_AP!.UpdateBasedOnLocations(SuitOffset, MinikitOffset - 1);
-            LevelHandler.UpdateMinikitCounts(true);
-            Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, LevelOffset - 1);
-            Mod.LB1_AP!.UpdateBasedOnItems(LevelOffset, TrueSuperHeroOffset - 1);
-            Mod.LB1_AP!.UpdateBasedOnLocations(TrueSuperHeroOffset, RedBrickOffset - 1);
-            Mod.LB1_AP!.UpdateBasedOnItems(RedBrickOffset, MaxItemID);
+            UpdateHubItemsAndLocations();
         }
         else
         {
-            Mod.LB1_AP!.UpdateBasedOnItems(0, MinikitOffset - 1);
-            LevelHandler.UpdateMinikitCounts(false);
-            Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, RedBrickOffset - 1);
-            Mod.LB1_AP!.UpdateBasedOnItems(RedBrickOffset, MaxItemID);
+            UpdateLevelItemsAndLocations();
         }
     }
 
-    private static readonly ushort[] HubMapIDs = [0x6, 0x9, 0xA, 0x5];
-
+    // Since the archi switches the game flags between location & item states, we have a custom function that runs when a menu is opened.
+    // edx is how deep of a menu is open and ecx is what type of menu was opened
     [Function([FunctionAttribute.Register.edx, FunctionAttribute.Register.ecx],
     FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
     public delegate void OpenMenu(ushort edx, byte ecx);
     private static void OnOpenMenu(ushort edx, byte ecx)
     {
-        // Sometimes we need to change the character selectedby Player 2. This first section handles that
+        // Sometimes we need to change the character selected by Player 2 (i.e. villain level or vehicle level)
         bool isInLevelSelect;
         lock (Mod.GameInstance!.StateLock)
         {
             isInLevelSelect = Mod.GameInstance!.isLevelSelectOpen;
         }
-        if (isInLevelSelect && edx == 3) // 3 is when the character selector is to open
+        if (isInLevelSelect && edx == 3) // 3 is when the freeplay character selector is to open
         {
             CharacterHandler.HandleCharacterSelect();
         }
 
-        // ecx: 0x21 is menu, 0x2C is shop, & 0x2F is level
+        // If the player is deeper than level 1 or Map ID is menu, abandon our function
         if (edx != 1 || Mod.GameInstance!.MapID == 0)
         {
             return;
         }
+
         Mod.PrintToLog($"ecx for Menu Opened is: 0x{ecx:X}");
+
+        // Handle Game Flags between Item & Location states
         ResetItems();
+        // ecx: 0x21 is menu, 0x2C is shop, & 0x2F is level
         if (IsInHub() && ecx == 0x21) // Open menu
         {
             lock (Mod.GameInstance!.StateLock)
@@ -525,8 +567,12 @@ public class Game
                 Mod.GameInstance!.isMenuOpen = true;
             }
             Mod.PrintToLog("Menu In Hub Opened");
+
+            // Update Game Flags
             Mod.LB1_AP!.UpdateBasedOnItems(0, MaxItemID);
             LevelHandler.UpdateMinikitCounts(true);
+
+            // Print the wincon status on the menu
             HintSystem.UpdateWinConText();
         }
         else if (IsInHub() && ecx == 0x2C) // Open Shop
@@ -536,8 +582,12 @@ public class Game
                 Mod.GameInstance!.isShopOpen = true;
             }
             Mod.PrintToLog("Shop In Hub Opened");
+
+            // Update Game flags
             Mod.LB1_AP!.UpdateBasedOnLocations(0, MaxItemID);
             LevelHandler.UpdateMinikitCounts(false);
+
+            // Handle the shop flags that prevent purchases, adjust shop prices, & determine special character purchasability
             Shop.ResetShopPurchaseLocks();
             Shop.SetShopPrices(Mod.LB1_AP!.SlotDataInstance!.CheaperShops, false);
             if (Mod.LB1_AP!.SlotDataInstance!.SimpleEpisodeCharacters == 1)
@@ -552,6 +602,8 @@ public class Game
             {
                 Mod.GameInstance!.isLevelSelectOpen = true;
             }
+
+            // Update Game Flags
             Mod.LB1_AP!.UpdateBasedOnItems(0, MinikitOffset - 1);
             LevelHandler.UpdateMinikitCounts(false);
             Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, LevelOffset - 1);
@@ -565,15 +617,21 @@ public class Game
                 Mod.GameInstance!.isMenuOpen = true;
             }
             Mod.PrintToLog("Menu in Level Opened");
+
+            // Update Game Flags
             Mod.LB1_AP!.UpdateBasedOnItems(0, MinikitOffset - 1);
             LevelHandler.UpdateMinikitCounts(false);
             Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, RedBrickOffset - 1);
             Mod.LB1_AP!.UpdateBasedOnItems(RedBrickOffset, MaxItemID);
+
+            // Make the minikit count & Win Con text appear
             HintSystem.MakeMinikitCountAppear();
             HintSystem.UpdateWinConText();
         }
     }
 
+
+    // Since the archi switches the game flags between location & item states, we have a custom function that runs when a menu is closed. We don't need any registers for this function
     [Function(CallingConventions.Fastcall)]
     public delegate void CloseMenu();
     private static void OnCloseMenu()
@@ -587,6 +645,8 @@ public class Game
             isInMenu = Mod.GameInstance!.isMenuOpen;
             isInLevelSelect = Mod.GameInstance!.isLevelSelectOpen;
         }
+
+        // Since you can't be in 2 of these at once and game flags need to be the same after, we update all 3 when closed
         if (isInMenu || isInShop || isInLevelSelect)
         {
             lock (Mod.GameInstance!.StateLock)
@@ -595,33 +655,31 @@ public class Game
                 Mod.GameInstance!.isShopOpen = false;
                 Mod.GameInstance!.isLevelSelectOpen = false;
             }
+
+            // Reverse the shop price decrease
             if (isInShop)
             {
                 Shop.SetShopPrices(Mod.LB1_AP!.SlotDataInstance!.CheaperShops, true);
             }
+
+            // Handle Game Flags
             ResetItems();
             if (IsInHub())
             {
-                Mod.LB1_AP!.UpdateBasedOnItems(0, SuitOffset - 1);
-                Mod.LB1_AP!.UpdateBasedOnLocations(SuitOffset, MinikitOffset - 1);
-                LevelHandler.UpdateMinikitCounts(true);
-                Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, LevelOffset - 1);
-                Mod.LB1_AP!.UpdateBasedOnItems(LevelOffset, TrueSuperHeroOffset - 1);
-                Mod.LB1_AP!.UpdateBasedOnLocations(TrueSuperHeroOffset, RedBrickOffset - 1);
-                Mod.LB1_AP!.UpdateBasedOnItems(RedBrickOffset, MaxItemID);
+                UpdateHubItemsAndLocations();
             }
             else
             {
-                Mod.LB1_AP!.UpdateBasedOnItems(0, MinikitOffset - 1);
-                LevelHandler.UpdateMinikitCounts(false);
-                Mod.LB1_AP!.UpdateBasedOnLocations(HostageOffset, RedBrickOffset - 1);
-                Mod.LB1_AP!.UpdateBasedOnItems(RedBrickOffset, MaxItemID);
+                UpdateLevelItemsAndLocations();
             }
+            // Make the Minikit Count on menu disappear and win con text go back to vanilla
             HintSystem.MakeMinikitCountDisappear();
             HintSystem.RestoreWinConText();
         }
     }
 
+    // This custom function runs whenever a player clicks new game. A cutscene will play showing the villains escaping
+    // This function will change the map to be loaded after to Arkham instead of You Can Bank on Batman
     [Function(CallingConventions.Fastcall)]
     public delegate void NewGameCutscene();
     private static unsafe void OnNewGameCutscene()
@@ -635,6 +693,8 @@ public class Game
         }
     }
 
+    // This custom function runs when a hostage is collected, determines the level and reports the archi location
+    // eax is the address to write to and edx is the bit
     [Function([FunctionAttribute.Register.eax, FunctionAttribute.Register.edx],
     FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
     public delegate void HostageRescue(int eax, uint edx);
@@ -665,6 +725,7 @@ public class Game
     }
 
     // This function runs when a player changes suit by entering a suit changer. It will report the suit as worn to archipelago.
+    // edx is the suit offset that the player is going to wear
     [Function([FunctionAttribute.Register.edx],
     FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
     public delegate void ChangeSuitWorn(ushort edx);
@@ -680,6 +741,7 @@ public class Game
     }
 
     // This function runs when the game tries to change the suit appearing on a suit changer. If the player doesn't have it unlocked, it changes the last 2 bytes to the "empty/blocked" suit code.
+    // eax contains the suit value that is going to be written and we change it in game code if it isn't unlocked yet
     [Function([FunctionAttribute.Register.eax,],
     FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
     public delegate uint ChangeSuitSignal(uint eax);
@@ -688,7 +750,6 @@ public class Game
         Mod.PrintToLog($"Suit Signal Changed. eax is: 0x{eax:X}");
         if (eax == 0)
         {
-            // TODO: If this works, break it into a function to avoid duplicate code
             ushort blockedCode = Suits.GetSuitCode(10);
             eax = (eax & 0xFFFF0000u) | blockedCode;
             Mod.PrintToLog($"Suit is not unlocked. Blocking. Blocked Code: 0x{blockedCode:X}. eax: 0x{eax:X}");
@@ -710,6 +771,7 @@ public class Game
     }
 
     // This function runs when the player purchases a red brick (extra/suit upgrade). It performs a bit operation to determine which one was purchased and reports the archi location
+    // eax is the address & edx is the bit
     [Function([FunctionAttribute.Register.eax, FunctionAttribute.Register.edx],
     FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
     public delegate void PurchaseRedBrick(uint eax, uint edx);
@@ -733,6 +795,7 @@ public class Game
     }
 
     // This function runs when the player picks up a stud. As a QOL, we save any stud collected by the player regardless of whether they can beat the level or not.
+    // ecx is the address to write to and edi is the stud value picked up
     [Function([FunctionAttribute.Register.ecx, FunctionAttribute.Register.edi],
     FunctionAttribute.Register.edi, FunctionAttribute.StackCleanup.Callee)]
     // edi is the stud value picked up and ecx is the address it is being written to
@@ -759,6 +822,9 @@ public class Game
         HintSystem.HandleInterruptedMessage();
     }
 
+    // The custom function is inserted where the game constantly (once per frame likely) updates the item name in the shop.
+    // This function will check to see where in the shop you are and update the text to show the archi location name.
+    // We NOP the code that forces the text to update, so only ours runs
     [Function([FunctionAttribute.Register.eax],
     FunctionAttribute.Register.eax, FunctionAttribute.StackCleanup.Callee)]
     public delegate void ShopItemSelected(int eax);
@@ -780,6 +846,9 @@ public class Game
         Shop.HandleShopText(itemOffset);
     }
 
+    // This custom function runs whenever you open a sub menu in the shop (extras, characters, data, etc.)
+    // It will NOP the assembly code that constantly writes to the address showing shop text on screen.
+    // We NOP & revert to original whenever a sub menu is open cause it affects other text in game too outside of the shop.
     [Function(CallingConventions.Fastcall)]
     private delegate void OpenShopSubMenu();
     private static unsafe void OnOpenShopSubMenu()
@@ -793,6 +862,7 @@ public class Game
         }
     }
 
+    // Reverts the effects of the function above.
     [Function(CallingConventions.Fastcall)]
     private delegate void CloseShopSubMenu();
     private static void OnCloseShopSubMenu()
@@ -801,6 +871,8 @@ public class Game
         Shop.RestoreShopTextCode();
     }
 
+    // The game does not give the player a glide, dive, or tech character cause it assumes they have suits.
+    // Whenever the game adjusts the freeplay character array, we make sure to force it to have a glide, dive & tech character if unlocked.
     [Function(CallingConventions.Fastcall)]
     private delegate void SelectFreeplayCharacters();
     private static void OnSelectFreeplayCharacters()
@@ -820,7 +892,7 @@ public class Game
         Mod.LB1_AP!.CheckLocation(apID);
     }
 
-    // Helper function that resets all items/locations to locked state.
+    // Helper function that resets all game flags to locked state.
     private static void ResetItems()
     {
         CharacterHandler.ResetUnlockedCharacters();
