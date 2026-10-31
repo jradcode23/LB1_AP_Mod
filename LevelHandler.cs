@@ -249,7 +249,7 @@ public class LevelHandler
         0x04, // H1-2
         0x05, // H1-3
         0x06, // H1-4
-        0x06, // H1-5
+        0x07, // H1-5
         0x0A, // H2-1
         0x0B, // H2-2
         0x0C, // H2-3
