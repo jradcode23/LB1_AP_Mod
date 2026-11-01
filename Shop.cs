@@ -243,9 +243,10 @@ public class Shop
     }
 
     private static unsafe int* CharacterPriceBaseAddress => *(int**)(Mod.BaseAddress + 0x5C58EC) + (4 / 4);
-    private static unsafe byte* RedBrickPriceBaseAddress => *(byte**)(Mod.BaseAddress + 0x6BE160);
-    private static unsafe int* ExtrasPriceBaseAddress => *(int**)(RedBrickPriceBaseAddress + ExtraOffset) + (0x64 / 4);
-    private static unsafe int* SuitUpgradePriceBaseAddress => *(int**)(RedBrickPriceBaseAddress + SuitUpgradeOffset) + (0x64 / 4);
+    private static unsafe byte* RedBrickPriceBaseAddress => *(byte**)(Mod.BaseAddress + 0x560894);
+    private static unsafe byte* RedBrickPriceBaseAddress2 => *(byte**)(RedBrickPriceBaseAddress + 0x53B0);
+    private static unsafe int* ExtrasPriceBaseAddress => *(int**)(RedBrickPriceBaseAddress2 + ExtraOffset) + (0x64 / 4);
+    private static unsafe int* SuitUpgradePriceBaseAddress => *(int**)(RedBrickPriceBaseAddress2 + SuitUpgradeOffset) + (0x64 / 4);
 
     private static unsafe void ApplyPriceOperation(int* baseAddress, int count, int gap, int multiplier, bool reverse = false)
     {
@@ -274,7 +275,7 @@ public class Shop
 
     private static unsafe bool AreShopBaseAddressesValid()
     {
-        return CharacterPriceBaseAddress != null && RedBrickPriceBaseAddress != null && ExtrasPriceBaseAddress != null && SuitUpgradePriceBaseAddress != null;
+        return CharacterPriceBaseAddress != null && RedBrickPriceBaseAddress2 != null && ExtrasPriceBaseAddress != null && SuitUpgradePriceBaseAddress != null;
     }
 
     // This helper function is used to reduce the shop prices based on what is stated in the Slot Data
