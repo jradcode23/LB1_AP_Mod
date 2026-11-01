@@ -93,7 +93,7 @@ public class Mod : ModBase // <= Do not Remove.
             return;
         }
         SetUpAP(Configuration.ArchipelagoOptions.Server, Configuration.ArchipelagoOptions.Port, Configuration.ArchipelagoOptions.Slot, Configuration.ArchipelagoOptions.Password);
-        PrintToLog("Mod Version: LB1_AP_mod version 1.0.0 Source Code");
+        PrintToLog("Mod Version: LB1_AP_mod version 1.0.1 Source Code");
 
         var thread1 = new Thread(start: () =>
         {
