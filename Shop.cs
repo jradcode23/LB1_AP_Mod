@@ -230,7 +230,7 @@ public class Shop
         {
             string message = item.Player + "'s " + item.ItemDisplayName;
             // Counted in UTF-8 bytes: the slot holds bytes, and an accent takes two
-            while (System.Text.Encoding.UTF8.GetByteCount(message) > 64)
+            while (System.Text.Encoding.UTF8.GetByteCount(message) > 60)
             {
                 message = message[..^1]; // Truncate message if it exceeds selected max shop character length
             }
